@@ -1,4 +1,4 @@
-"""CarbonSense Streamlit app."""
+"""Lavoisier Streamlit app."""
 
 from __future__ import annotations
 
@@ -58,8 +58,8 @@ def explain_top_candidate(ranked: pd.DataFrame, weights: dict[str, float]) -> st
     return f"{top['material_id']} ranks first. Its strongest weighted drivers are {drivers}."
 
 
-st.set_page_config(page_title="CarbonSense", page_icon="CS", layout="wide")
-st.title("CarbonSense")
+st.set_page_config(page_title="Lavoisier", page_icon="L", layout="wide")
+st.title("Lavoisier")
 st.caption(
     "AI-assisted, human-reviewed screening for carbon-capture materials. "
     "Scores support comparison; they are not experimental validation."
@@ -178,7 +178,7 @@ else:
     st.download_button(
         "Export current shortlist",
         csv_bytes,
-        "carbonsense_shortlist.csv",
+        "lavoisier_shortlist.csv",
         "text/csv",
         type="primary",
     )

@@ -67,7 +67,7 @@ not current MVP scope. See `docs/variant_aware_mof_screening.md`.
 
 Demo script:
 
-1. open CarbonSense;
+1. open Lavoisier;
 2. load approved dataset;
 3. select capture context;
 4. adjust ranking weights;

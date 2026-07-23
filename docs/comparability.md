@@ -1,6 +1,6 @@
 # Comparability Engine
 
-CarbonSense treats extraction, approval, comparability, and ranking as separate steps.
+Lavoisier treats extraction, approval, comparability, and ranking as separate steps.
 
 A record can be extracted correctly and still be blocked from ranked comparison if the operating conditions are not comparable.
 
@@ -31,7 +31,7 @@ The first non-missing record in the active review scope is used as the baseline.
 
 A generic LLM can summarize a paper but may still compare values measured under different pressure, temperature, gas-mixture, force-field, charge-method, material-family, humidity, or evidence conditions.
 
-CarbonSense makes those assumptions explicit in backend code. The result is an exportable table with:
+Lavoisier makes those assumptions explicit in backend code. The result is an exportable table with:
 
 - `comparability_status`
 - `comparability_reasons`

@@ -1,6 +1,6 @@
-# CarbonSense
+# Lavoisier
 
-CarbonSense is a software-first chemical-engineering portfolio project: a transparent backend-first review tool for screening MOF carbon-capture adsorption records from public or user-supplied datasets.
+Lavoisier is a software-first chemical-engineering portfolio project: a transparent backend-first review tool for screening MOF carbon-capture adsorption records from public or user-supplied datasets.
 
 The project does not claim to discover a new best material. It helps users compare records from a controlled MOF/GCMC screening slice, understand tradeoffs, and produce a reviewable shortlist with provenance and comparability warnings.
 

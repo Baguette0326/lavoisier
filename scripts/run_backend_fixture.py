@@ -1,4 +1,4 @@
-"""Run CarbonSense's backend pipeline on the synthetic CRAFTED-like fixture."""
+"""Run Lavoisier's backend pipeline on the synthetic CRAFTED-like fixture."""
 
 from __future__ import annotations
 

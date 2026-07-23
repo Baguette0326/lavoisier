@@ -1,5 +1,5 @@
 metadata:
-  purpose: "Approved-source registry for CarbonSense monitoring and manual review."
+  purpose: "Approved-source registry for Lavoisier monitoring and manual review."
   rule: "Do not ingest or redistribute datasets without licence and provenance review."
 
 sources:

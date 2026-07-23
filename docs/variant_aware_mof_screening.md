@@ -11,7 +11,7 @@ real CRAFTED ingestion.
 
 A MOF name alone may not identify a unique, comparable material. Related records
 can differ by crystal polymorph, topology, linker position, activation state,
-or sample preparation. CarbonSense should eventually avoid treating those
+or sample preparation. Lavoisier should eventually avoid treating those
 records as one interchangeable material.
 
 The feature belongs in the identity and comparability layer, not as another

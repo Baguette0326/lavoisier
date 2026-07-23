@@ -1,6 +1,6 @@
 # Backend Workflow
 
-CarbonSense is backend-first. The Streamlit app is only a thin demonstration layer.
+Lavoisier is backend-first. The Streamlit app is only a thin demonstration layer.
 
 ## Controlled MVP Scope
 
@@ -29,7 +29,7 @@ source registry
 
 The differentiator is not a chat UI. It is the domain rule layer that prevents weak comparisons.
 
-CarbonSense must be able to say:
+Lavoisier must be able to say:
 
 ```text
 This value was extracted correctly,

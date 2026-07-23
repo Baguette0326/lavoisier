@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-23T09:45:08.943509+00:00",
+  "generated_at": "2026-07-23T13:49:39.476973+00:00",
   "source_file": "C:\\Users\\Jayde\\OneDrive\\Documents\\Chemical Engineering Portfolio\\CarbonSense\\data\\crafted_like_fixture.csv",
   "source_name": "Synthetic CRAFTED-like fixture",
   "source_version": "fixture",
@@ -35,7 +35,7 @@
   ],
   "transformation_steps": [
     "Load source table without mutating the raw/source file.",
-    "Validate required CarbonSense and CRAFTED-like columns.",
+    "Validate required Lavoisier and CRAFTED-like columns.",
     "Select the controlled MOF/GCMC slice using the recorded filter_applied settings.",
     "Export out-of-slice records separately instead of silently dropping them.",
     "Apply comparability rules and tradeoff flags to in-slice records.",

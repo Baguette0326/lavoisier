@@ -1,6 +1,6 @@
 # CRAFTED Approval Checklist
 
-CarbonSense must not ingest real CRAFTED data until this checklist is completed.
+Lavoisier must not ingest real CRAFTED data until this checklist is completed.
 The goal is to preserve source lineage and avoid making claims from data we are
 not approved to use or redistribute.
 
@@ -10,7 +10,7 @@ not approved to use or redistribute.
 - Platform: Zenodo
 - DOI: `10.5281/zenodo.8190237`
 - Registry key: `crafted_2_0_0`
-- Current CarbonSense status: `recommended_for_manual_approval_review`
+- Current Lavoisier status: `recommended_for_manual_approval_review`
 
 ## Approval Gate
 

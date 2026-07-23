@@ -1,4 +1,4 @@
-"""Export reviewable CarbonSense screening results."""
+"""Export reviewable Lavoisier screening results."""
 
 from __future__ import annotations
 
@@ -130,7 +130,7 @@ def build_transformation_log(
         generated_files=tuple(str(path.relative_to(output_dir)) for path in generated_files),
         transformation_steps=(
             "Load source table without mutating the raw/source file.",
-            "Validate required CarbonSense and CRAFTED-like columns.",
+            "Validate required Lavoisier and CRAFTED-like columns.",
             "Select the controlled MOF/GCMC slice using the recorded filter_applied settings.",
             "Export out-of-slice records separately instead of silently dropping them.",
             "Apply comparability rules and tradeoff flags to in-slice records.",

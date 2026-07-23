@@ -8,7 +8,7 @@ OpenDAC 2023 is a major public source lead for direct-air-capture sorbent discov
 
 OpenDAC 2025 is a later source lead that expands the scope with nearly 70 million DFT single-point calculations across 15,000 MOFs for CO2, H2O, N2, and O2 adsorption.
 
-Use case for CarbonSense:
+Use case for Lavoisier:
 
 - source-monitoring target;
 - possible approved dataset after access/licence review;
@@ -18,7 +18,7 @@ Use case for CarbonSense:
 
 Adsorption-isotherm databases may provide experimental or literature-derived adsorption measurements. They are useful but require careful metadata handling because pressure, temperature, gas mixture, and material naming conventions differ.
 
-Use case for CarbonSense:
+Use case for Lavoisier:
 
 - experimental/literature evidence source if licensing permits;
 - source of pressure-temperature-specific adsorption data.
@@ -27,7 +27,7 @@ Use case for CarbonSense:
 
 MOF structure datasets can provide structural descriptors such as pore size, surface area, density, and topology. They may need to be linked to adsorption datasets before screening.
 
-Use case for CarbonSense:
+Use case for Lavoisier:
 
 - material descriptor source;
 - not sufficient by itself unless adsorption target data is available.
@@ -39,7 +39,7 @@ with computational CO2/N2 adsorption screening. It still requires manual
 approval before ingestion. Use `docs/crafted_approval_checklist.md` before any
 download, parser work, or processed-slice export.
 
-Use case for CarbonSense:
+Use case for Lavoisier:
 
 - first approved computational GCMC source target;
 - controlled MOF-only post-combustion-style CO2/N2 slice;

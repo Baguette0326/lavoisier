@@ -1,8 +1,8 @@
-# CarbonSense Product Brief
+# Lavoisier Product Brief
 
 ## One-Line Pitch
 
-CarbonSense is a human-in-the-loop backend and demo dashboard for screening MOF carbon-capture adsorption records using transparent comparability checks, provenance, and tradeoff explanations.
+Lavoisier is a human-in-the-loop backend and demo dashboard for screening MOF carbon-capture adsorption records using transparent comparability checks, provenance, and tradeoff explanations.
 
 ## User
 
@@ -23,7 +23,7 @@ The unresolved software problem is not producing another black-box model. It is 
 
 ## Product Promise
 
-CarbonSense helps answer:
+Lavoisier helps answer:
 
 - Which candidates look promising under my constraints?
 - Why are they ranked highly?

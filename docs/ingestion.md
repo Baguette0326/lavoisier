@@ -1,6 +1,6 @@
 # Ingestion and Extraction
 
-CarbonSense stages source data for human review before it can enter the approved screening workflow. The first ingestion layer is deterministic and supports CSV plus blank-line-separated structured text. It does not call external APIs, scrape sources, convert units, merge material aliases, or write to `data/approved`.
+Lavoisier stages source data for human review before it can enter the approved screening workflow. The first ingestion layer is deterministic and supports CSV plus blank-line-separated structured text. It does not call external APIs, scrape sources, convert units, merge material aliases, or write to `data/approved`.
 
 ## Data flow
 

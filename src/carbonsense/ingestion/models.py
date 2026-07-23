@@ -20,7 +20,7 @@ class ApprovalStatus(StrEnum):
 
 
 class UnitStatus(StrEnum):
-    """How a source unit relates to CarbonSense's canonical unit."""
+    """How a source unit relates to Lavoisier's canonical unit."""
 
     EXACT = "exact"
     NOT_APPLICABLE = "not_applicable"
@@ -61,7 +61,7 @@ class UnitMetadata:
 
 @dataclass(frozen=True)
 class ExtractionCandidate:
-    """One source value proposed for a canonical CarbonSense field."""
+    """One source value proposed for a canonical Lavoisier field."""
 
     raw_field: str
     raw_value: str

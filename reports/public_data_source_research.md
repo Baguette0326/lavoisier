@@ -7,7 +7,7 @@ Research date: 2026-07-15
 Use **CRAFTED 2.0.0 as the first dataset to evaluate for manual approval**, and
 keep **NIST/ARPA-E ISODB as the first experimental-data follow-on**.
 
-CRAFTED is the strongest fit for the first CarbonSense demonstration because it
+CRAFTED is the strongest fit for the first Lavoisier demonstration because it
 is a manageable 54.7 MB compressed archive, has explicit file-level licensing,
 and contains simulated CO2 and N2 adsorption isotherms and adsorption enthalpies
 for 690 MOFs at 273 K, 298 K, and 323 K. It is therefore closer to the current
@@ -20,7 +20,7 @@ Do not download it automatically. The next gate should be a human review of the
 license and archive layout, followed by a checksum-verified download and a small,
 reproducible extraction from one consistent simulation protocol. The first slice
 should use MOFs only, 298 K, one force field, one charge method, and common
-pressure points. CarbonSense should not label that slice as direct-air-capture or
+pressure points. Lavoisier should not label that slice as direct-air-capture or
 post-combustion evidence until its pressure range and gas basis have been checked.
 
 Primary references:
@@ -31,7 +31,7 @@ Primary references:
 
 ## Source comparison
 
-| Source | Evidence and data | Access and size | License status | CarbonSense fit | Decision |
+| Source | Evidence and data | Access and size | License status | Lavoisier fit | Decision |
 |---|---|---|---|---|---|
 | CRAFTED 2.0.0 | GCMC CO2/N2 isotherms and adsorption enthalpies; MOF/COF CIFs; simulation inputs; 273/298/323 K | Open Zenodo archive; 54.7 MB compressed | Generated files: CDLA-Sharing-1.0. MOF CIF lineage: CC BY 4.0. Some COF and RASPA files: MIT. | Directly supplies uptake curves, CO2/N2 comparisons, temperature, and enthalpy, with explicit computational provenance | **Evaluate first for approval** |
 | NIST/ARPA-E ISODB | Experimental and literature-derived single- and multicomponent isotherms, conditions, material IDs, source DOIs | Public web UI and JSON/XML/CSV APIs; query small subsets | Public access is clear, but an explicit blanket data-redistribution license was not found on the reviewed landing pages or repository | Best route to experimental evidence; excellent provenance, but heterogeneous conditions and rights need record-level care | Follow-on; API pilot only after rights review |
@@ -102,7 +102,7 @@ and simulation metadata. Its JSON is interoperable with NIST ISODB. The
 [public interface](https://mof.tech.northwestern.edu/) exposes search and download
 features.
 
-This is arguably the closest large-scale match to CarbonSense's desired columns,
+This is arguably the closest large-scale match to Lavoisier's desired columns,
 but it should not be the first ingestion: the source is large, combines several
 underlying studies/databases, and the reviewed interfaces did not show a single
 explicit license covering every downloadable record. A later pilot should query
@@ -145,7 +145,7 @@ contains a small recommended-screening CSV and separate water/TSA archives.
 
 The SI CSVs are attractive for a small descriptor fixture, but they do not by
 themselves demonstrate carbon-capture ranking. CSD-modified files require login,
-and unmodified CSD files require a CCDC license. CarbonSense should never copy a
+and unmodified CSD files require a CCDC license. Lavoisier should never copy a
 license from the Zenodo SI set onto the separate CSD branches.
 
 ### 6. QMOF
