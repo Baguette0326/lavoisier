@@ -1,0 +1,74 @@
+metadata:
+  purpose: "Approved-source registry for CarbonSense monitoring and manual review."
+  rule: "Do not ingest or redistribute datasets without licence and provenance review."
+
+sources:
+  opendac_2023:
+    title: "Open DAC 2023 Dataset and Challenges for Sorbent Discovery in Direct Air Capture"
+    platform: "official project site and paper"
+    reference: "https://open-dac.github.io/"
+    evidence_type: "computational DFT"
+    status: "defer_large_dataset_license_review_required"
+    monitoring_method: "manual literature/source check"
+    local_path: "data/raw/opendac_2023"
+    notes: "Reported as >38M DFT calculations across >8,400 MOFs. Archived helper repository is MIT; confirm the full dataset license separately before ingestion."
+
+  opendac_2025:
+    title: "Open DAC 2025 Dataset for Sorbent Discovery in Direct Air Capture"
+    platform: "Hugging Face gated dataset and paper"
+    reference: "https://huggingface.co/facebook/ODAC25"
+    evidence_type: "computational DFT"
+    status: "defer_gated_large_dataset"
+    monitoring_method: "manual literature/source check"
+    local_path: "data/raw/opendac_2025"
+    notes: "Dataset is CC BY 4.0; models use a separate license. Access requires identity/organization details and is geographically restricted."
+
+  nist_adsorption_database:
+    title: "NIST/ARPA-E Database of Novel and Emerging Adsorbent Materials"
+    platform: "NIST web database, API, and official GitHub mirror"
+    reference: "https://www.nist.gov/programs-projects/nist-data-resources-adsorption"
+    evidence_type: "experimental or literature-derived"
+    status: "follow_on_license_and_record_rights_review_required"
+    monitoring_method: "manual source review"
+    local_path: "data/raw/nist_adsorption"
+    notes: "Public JSON/XML/CSV APIs with DOI-traceable records. No blanket redistribution license was found on reviewed pages; digitized literature curves need record-level care."
+
+  crafted_2_0_0:
+    title: "CRAFTED 2.0.0 adsorption isotherm dataset"
+    platform: "Zenodo"
+    reference: "https://doi.org/10.5281/zenodo.8190237"
+    evidence_type: "computational GCMC"
+    status: "recommended_for_manual_approval_review"
+    monitoring_method: "pinned Zenodo version and checksum"
+    local_path: "data/raw/crafted_2_0_0"
+    notes: "54.7 MB; CO2/N2 isotherms and enthalpies. Generated files are CDLA-Sharing-1.0; inherited MOF CIFs are CC BY 4.0. Do not download until human approval."
+
+  mofx_db:
+    title: "MOFX-DB computational adsorption database"
+    platform: "NIST-described public web database/API"
+    reference: "https://www.nist.gov/publications/mofx-db-online-database-computational-adsorption-data-nanoporous-materials"
+    evidence_type: "computational GCMC from multiple studies"
+    status: "follow_on_license_review_required"
+    monitoring_method: "manual API and license review"
+    local_path: "data/raw/mofx_db"
+    notes: ">3M simulated adsorption points and textural properties for >160,000 MOFs/zeolites. Narrow to one source database and fixed conditions before use."
+
+  core_mof_2024_si:
+    title: "Computation-Ready Experimental MOF 2024 supporting-information dataset"
+    platform: "Zenodo"
+    reference: "https://doi.org/10.5281/zenodo.15055758"
+    evidence_type: "experimental-source structures with computed and predicted descriptors"
+    status: "enrichment_source_requires_manual_approval"
+    monitoring_method: "pinned Zenodo version"
+    local_path: "data/raw/core_mof_2024_si"
+    notes: "Zenodo SI set is CC BY 4.0. CSD-derived branches have separate login/license conditions and must not be treated as the same license scope."
+
+  qmof:
+    title: "Quantum MOF Database"
+    platform: "Figshare and GitHub"
+    reference: "https://doi.org/10.6084/m9.figshare.13147324"
+    evidence_type: "computational DFT descriptors"
+    status: "defer_enrichment_source"
+    monitoring_method: "pinned Figshare version"
+    local_path: "data/raw/qmof"
+    notes: "Data is CC BY 4.0 and code is MIT. Useful for descriptors and entity matching, not a uniform experimental adsorption table."

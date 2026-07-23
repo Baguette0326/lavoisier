@@ -1,0 +1,4 @@
+material_id,material_class,evidence_type,simulation_method,force_field,charge_method,source,capture_context,temperature_k,pressure_bar,co2_uptake_mmol_g,n2_uptake_mmol_g,co2_n2_selectivity,heat_of_adsorption_kj_mol,surface_area_m2_g,pore_volume_cm3_g,density_g_cm3,humidity_condition
+Fixture-MOF-05,MOF,computational_gcmc,GCMC,DREIDING,DDEC,Synthetic CRAFTED-like fixture,post-combustion,298,1.0,6.8,0.12,57,62,2900,1.01,0.58,dry simulation
+Fixture-MOF-06,MOF,computational_gcmc,GCMC,UFF,DDEC,Synthetic CRAFTED-like fixture,post-combustion,323,1.0,4.1,0.09,46,35,1890,0.78,0.81,dry simulation
+Fixture-COF-01,COF,computational_gcmc,GCMC,UFF,DDEC,Synthetic CRAFTED-like fixture,post-combustion,298,1.0,7.1,0.1,71,44,3300,1.4,0.52,dry simulation

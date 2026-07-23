@@ -1,0 +1,41 @@
+metadata:
+  purpose: "Canonical columns and screening direction for CarbonSense."
+
+required_columns:
+  - material_id
+  - evidence_type
+
+recommended_columns:
+  - source
+  - capture_context
+  - co2_uptake_mmol_g
+  - co2_n2_selectivity
+  - heat_of_adsorption_kj_mol
+  - surface_area_m2_g
+  - pore_volume_cm3_g
+  - pore_limiting_diameter_a
+  - largest_cavity_diameter_a
+  - density_g_cm3
+  - humidity_flag
+
+scoring_features:
+  co2_uptake_mmol_g:
+    direction: "maximize"
+    default_weight: 0.30
+  co2_n2_selectivity:
+    direction: "maximize"
+    default_weight: 0.20
+  heat_of_adsorption_kj_mol:
+    direction: "target_range"
+    default_weight: 0.20
+    target_min: 25
+    target_max: 60
+  surface_area_m2_g:
+    direction: "maximize"
+    default_weight: 0.10
+  pore_volume_cm3_g:
+    direction: "maximize"
+    default_weight: 0.10
+  density_g_cm3:
+    direction: "minimize"
+    default_weight: 0.10

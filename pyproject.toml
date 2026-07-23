@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "carbonsense"
+version = "0.1.0"
+description = "Human-in-the-loop carbon-capture material screening dashboard."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Jayde" }]
+dependencies = [
+  "pandas>=2.2",
+  "numpy>=1.26",
+  "pyyaml>=6.0",
+  "plotly>=5.22",
+  "scikit-learn>=1.4",
+]
+
+[project.optional-dependencies]
+app = ["streamlit>=1.36"]
+test = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

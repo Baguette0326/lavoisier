@@ -1,0 +1,8 @@
+source_id,title,reference,status,evidence_type
+opendac_2023,Open DAC 2023 Dataset and Challenges for Sorbent Discovery in Direct Air Capture,https://open-dac.github.io/,defer_large_dataset_license_review_required,computational DFT
+opendac_2025,Open DAC 2025 Dataset for Sorbent Discovery in Direct Air Capture,https://huggingface.co/facebook/ODAC25,defer_gated_large_dataset,computational DFT
+nist_adsorption_database,NIST/ARPA-E Database of Novel and Emerging Adsorbent Materials,https://www.nist.gov/programs-projects/nist-data-resources-adsorption,follow_on_license_and_record_rights_review_required,experimental or literature-derived
+crafted_2_0_0,CRAFTED 2.0.0 adsorption isotherm dataset,https://doi.org/10.5281/zenodo.8190237,recommended_for_manual_approval_review,computational GCMC
+mofx_db,MOFX-DB computational adsorption database,https://www.nist.gov/publications/mofx-db-online-database-computational-adsorption-data-nanoporous-materials,follow_on_license_review_required,computational GCMC from multiple studies
+core_mof_2024_si,Computation-Ready Experimental MOF 2024 supporting-information dataset,https://doi.org/10.5281/zenodo.15055758,enrichment_source_requires_manual_approval,experimental-source structures with computed and predicted descriptors
+qmof,Quantum MOF Database,https://doi.org/10.6084/m9.figshare.13147324,defer_enrichment_source,computational DFT descriptors

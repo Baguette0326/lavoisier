@@ -1,0 +1,51 @@
+{
+  "generated_at": "2026-07-23T09:45:08.943509+00:00",
+  "source_file": "C:\\Users\\Jayde\\OneDrive\\Documents\\Chemical Engineering Portfolio\\CarbonSense\\data\\crafted_like_fixture.csv",
+  "source_name": "Synthetic CRAFTED-like fixture",
+  "source_version": "fixture",
+  "license_status": "synthetic_fixture_not_research_data",
+  "source_checksum_sha256": "400354ea6b8a7abd71c86753bc9e4b0dfc62bc9ea3dd23f2aa5b65cdc528d933",
+  "input_row_count": 7,
+  "controlled_slice_row_count": 4,
+  "excluded_row_count": 3,
+  "rank_eligible_row_count": 4,
+  "blocked_row_count": 0,
+  "filter_applied": {
+    "material_class": "MOF",
+    "evidence_type": "computational_gcmc",
+    "simulation_method": "GCMC",
+    "temperature_k": 298.0,
+    "force_field": "UFF",
+    "charge_method": "DDEC"
+  },
+  "ranking_weights": {
+    "co2_uptake_mmol_g": 0.3,
+    "co2_n2_selectivity": 0.2,
+    "heat_of_adsorption_kj_mol": 0.2,
+    "surface_area_m2_g": 0.1,
+    "pore_volume_cm3_g": 0.1,
+    "density_g_cm3": 0.1
+  },
+  "generated_files": [
+    "ranked_records.csv",
+    "excluded_records.csv",
+    "blocked_records.csv",
+    "screening_metadata.json",
+    "transformation_log.json"
+  ],
+  "transformation_steps": [
+    "Load source table without mutating the raw/source file.",
+    "Validate required CarbonSense and CRAFTED-like columns.",
+    "Select the controlled MOF/GCMC slice using the recorded filter_applied settings.",
+    "Export out-of-slice records separately instead of silently dropping them.",
+    "Apply comparability rules and tradeoff flags to in-slice records.",
+    "Rank only records that remain rank-eligible.",
+    "Write ranked, excluded, blocked, metadata, and transformation-log review files."
+  ],
+  "limitations": [
+    "Synthetic fixtures are not research findings.",
+    "CRAFTED records are computational screening evidence, not experimental validation.",
+    "Ranking applies only within the controlled MOF/GCMC slice.",
+    "Blocked records require human review before comparison."
+  ]
+}
