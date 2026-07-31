@@ -87,15 +87,38 @@ Why was it filtered or blocked?
 Which exact settings and files produced the result?
 ```
 
+## CRAFTED Archive Inspection Command
+
+After completing `docs/crafted_approval_checklist.md` and downloading CRAFTED
+locally, inspect the archive before parser work:
+
+```bash
+python scripts/inspect_crafted_archive.py path/to/crafted/archive-or-folder
+```
+
+The inspection writes:
+
+```text
+reports/crafted_archive_inspection/archive_manifest.csv
+reports/crafted_archive_inspection/pressure_availability.csv
+reports/crafted_archive_inspection/candidate_column_map.json
+reports/crafted_archive_inspection/inspection_summary.md
+```
+
+This step does not ingest or rank real data. It only shows what files, columns,
+gases, pressures, and conditions are available so the first exact-match slice
+can be chosen responsibly.
+
 ## Next Backend Milestones
 
 1. Complete `docs/crafted_approval_checklist.md` before downloading or parsing
    real CRAFTED data.
-2. Choose exact CRAFTED force field and charge method after archive inspection.
-3. Replace the synthetic fixture with a small approved processed CRAFTED slice.
-4. Replace the synthetic transformation log with one backed by approved CRAFTED
+2. Run `scripts/inspect_crafted_archive.py` on the approved local archive.
+3. Choose exact CRAFTED force field, charge method, temperature, and pressure
+   pair after archive inspection.
+4. Replace the synthetic fixture with a small approved processed CRAFTED slice.
+5. Replace the synthetic transformation log with one backed by approved CRAFTED
    archive checksums and inspected source-file lineage.
-5. Add a pressure-availability export for the selected real CRAFTED slice.
 6. Only then improve the UI around this backend.
 
 ## Roadmap Concepts After Provenance

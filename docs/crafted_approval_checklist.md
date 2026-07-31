@@ -38,6 +38,15 @@ Answer these after approval and download:
 - Which material identifiers link adsorption values to MOF structures?
 - Are material names, structure IDs, and aliases stable enough for matching?
 
+Run the local inspection helper before parser work:
+
+```bash
+python scripts/inspect_crafted_archive.py path/to/crafted/archive-or-folder
+```
+
+Review `reports/crafted_archive_inspection/pressure_availability.csv` before
+choosing the first exact-match pressure pair.
+
 ## First Real Slice Decision
 
 Choose one conservative slice before writing the real parser:
@@ -77,4 +86,3 @@ Stop and ask for review if:
 - Source files do not expose force field, charge method, temperature, or pressure.
 - CO2 and N2 records cannot be matched to the same material and conditions.
 - The selected slice has too few comparable records to rank honestly.
-
