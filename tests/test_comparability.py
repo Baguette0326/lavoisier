@@ -47,6 +47,8 @@ def test_add_comparability_columns_blocks_different_pressure() -> None:
     assert result.loc[0, "rank_eligible"]
     assert not result.loc[1, "rank_eligible"]
     assert "pressure differs beyond tolerance" in result.loc[1, "comparability_reasons"]
+    assert result.loc[1, "block_type"] == "pressure_mismatch"
+    assert result.loc[1, "block_reason"] == result.loc[1, "comparability_reasons"]
 
 
 def test_add_comparability_columns_requires_humidity_context() -> None:
@@ -70,6 +72,7 @@ def test_add_comparability_columns_requires_humidity_context() -> None:
     assert not result.loc[0, "rank_eligible"]
     assert result.loc[0, "comparability_status"] == "needs_review"
     assert "humidity condition is not reported" in result.loc[0, "comparability_reasons"]
+    assert result.loc[0, "block_type"] == "missing_required_metric"
 
 
 def test_add_comparability_columns_blocks_non_mof_records() -> None:
@@ -112,6 +115,30 @@ def test_add_comparability_columns_blocks_different_force_field() -> None:
 
     assert not result.loc[1, "rank_eligible"]
     assert "force field differs from comparison scope" in result.loc[1, "comparability_reasons"]
+    assert result.loc[1, "block_type"] == "condition_mismatch"
+
+
+def test_add_comparability_columns_marks_missing_conditions_as_blocked() -> None:
+    frame = pd.DataFrame(
+        {
+            "material_id": ["A"],
+            "material_class": ["MOF"],
+            "evidence_type": ["computational_gcmc"],
+            "simulation_method": ["GCMC"],
+            "force_field": [None],
+            "charge_method": ["DDEC"],
+            "capture_context": ["post-combustion"],
+            "temperature_k": [298],
+            "pressure_bar": [1.0],
+        }
+    )
+
+    result = add_comparability_columns(frame)
+
+    assert not result.loc[0, "rank_eligible"]
+    assert result.loc[0, "comparability_status"] == "needs_review"
+    assert result.loc[0, "block_type"] == "missing_required_metric"
+    assert result.loc[0, "block_reason"] == "force field is missing"
 
 
 def test_rank_materials_excludes_non_eligible_records_by_default() -> None:

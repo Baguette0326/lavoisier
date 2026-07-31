@@ -75,3 +75,34 @@ def test_export_result_writes_review_files(tmp_path: Path) -> None:
     assert transformation_log["filter_applied"]["charge_method"] == "DDEC"
     assert "ranked_records.csv" in transformation_log["generated_files"]
     assert "transformation_log.json" in transformation_log["generated_files"]
+
+
+def test_export_result_writes_block_type_for_blocked_records(tmp_path: Path) -> None:
+    frame = pd.DataFrame(
+        {
+            "material_id": ["eligible", "blocked"],
+            "material_class": ["MOF", "MOF"],
+            "evidence_type": ["computational_gcmc", "computational_gcmc"],
+            "simulation_method": ["GCMC", "GCMC"],
+            "force_field": ["UFF", "UFF"],
+            "charge_method": ["DDEC", "DDEC"],
+            "source": ["fixture", "fixture"],
+            "capture_context": ["post-combustion", "post-combustion"],
+            "temperature_k": [298, 298],
+            "pressure_bar": [1.0, 1.2],
+            "co2_uptake_mmol_g": [1.0, 5.0],
+            "n2_uptake_mmol_g": [0.2, 0.1],
+            "co2_n2_selectivity": [5, 50],
+        }
+    )
+    result = run_crafted_screening_pipeline(
+        frame,
+        slice_config=CraftedSliceConfig(force_field="UFF", charge_method="DDEC"),
+    )
+
+    _, _, blocked_path, _, _ = export_result(result, tmp_path)
+
+    blocked = pd.read_csv(blocked_path)
+    assert blocked["material_id"].tolist() == ["blocked"]
+    assert blocked.loc[0, "block_type"] == "pressure_mismatch"
+    assert "pressure differs beyond tolerance" in blocked.loc[0, "block_reason"]

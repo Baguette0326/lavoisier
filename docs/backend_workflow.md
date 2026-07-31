@@ -68,8 +68,10 @@ reports/backend_fixture_export/transformation_log.json
 `excluded_records.csv` contains records outside the controlled slice, such as
 non-MOF records or records using a different force field, charge method, or
 temperature. `blocked_records.csv` contains records inside the controlled slice
-that still failed comparability checks. These files demonstrate the backend
-contract only. They are not research findings.
+that still failed comparability checks. Blocked rows include `block_type` and
+`block_reason`, so a missing pair, pressure mismatch, condition mismatch, or
+manual-review case is not silently hidden behind a generic rank failure. These
+files demonstrate the backend contract only. They are not research findings.
 
 `screening_metadata.json` summarizes the screening run: source label, source
 status, controlled slice settings, ranking weights, row counts, and limitations.
@@ -93,7 +95,8 @@ Which exact settings and files produced the result?
 3. Replace the synthetic fixture with a small approved processed CRAFTED slice.
 4. Replace the synthetic transformation log with one backed by approved CRAFTED
    archive checksums and inspected source-file lineage.
-5. Only then improve the UI around this backend.
+5. Add a pressure-availability export for the selected real CRAFTED slice.
+6. Only then improve the UI around this backend.
 
 ## Roadmap Concepts After Provenance
 

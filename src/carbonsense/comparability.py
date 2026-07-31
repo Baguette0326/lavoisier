@@ -170,22 +170,54 @@ def evaluate_row_comparability(
     return ComparabilityStatus.NOT_COMPARABLE, tuple(reasons), False
 
 
+def _block_type_for_reasons(reasons: Iterable[str]) -> str:
+    """Classify a non-eligible record into a stable review category."""
+    reason_text = "; ".join(reasons).casefold()
+    if not reason_text:
+        return ""
+    if "missing" in reason_text or "not reported" in reason_text:
+        if "co2" in reason_text or "n2" in reason_text or "pair" in reason_text:
+            return "incomplete_pair"
+        if "temperature" in reason_text or "pressure" in reason_text:
+            return "condition_mismatch"
+        return "missing_required_metric"
+    if "pressure" in reason_text:
+        return "pressure_mismatch"
+    if (
+        "temperature" in reason_text
+        or "force field" in reason_text
+        or "charge method" in reason_text
+        or "evidence type" in reason_text
+        or "simulation method" in reason_text
+        or "capture context" in reason_text
+        or "material class" in reason_text
+    ):
+        return "condition_mismatch"
+    if "unit" in reason_text:
+        return "invalid_units"
+    return "manual_review_required"
+
+
 def add_comparability_columns(
     frame: pd.DataFrame,
     rules: ComparabilityRules = DEFAULT_RULES,
 ) -> pd.DataFrame:
-    """Add comparability status, reasons, and rank eligibility columns."""
+    """Add comparability status, block reasons, and rank eligibility columns."""
     result = frame.copy()
     statuses: list[str] = []
     reason_strings: list[str] = []
+    block_types: list[str] = []
     eligible: list[bool] = []
     for _, row in result.iterrows():
         status, reasons, is_eligible = evaluate_row_comparability(row, result, rules)
         statuses.append(status.value)
         reason_strings.append("; ".join(reasons))
+        block_types.append("" if is_eligible else _block_type_for_reasons(reasons))
         eligible.append(is_eligible)
     result["comparability_status"] = statuses
     result["comparability_reasons"] = reason_strings
+    result["block_type"] = block_types
+    result["block_reason"] = reason_strings
     result["rank_eligible"] = eligible
     return result
 
