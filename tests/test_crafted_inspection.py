@@ -50,3 +50,34 @@ def test_write_inspection_outputs_reports_pressure_availability(tmp_path: Path) 
     assert {"file": "isotherms.csv", "column": "pressure_bar"} in column_map["pressure"]
     summary = summary_path.read_text(encoding="utf-8")
     assert "Files inspected: 1" in summary
+
+
+def test_write_inspection_outputs_uses_fast_crafted_folder_path(tmp_path: Path) -> None:
+    source_dir = tmp_path / "CRAFTED-2.0.1"
+    isotherm_dir = source_dir / "ISOTHERM_FILES"
+    enthalpy_dir = source_dir / "ENTHALPY_FILES"
+    isotherm_dir.mkdir(parents=True)
+    enthalpy_dir.mkdir()
+    (isotherm_dir / "DDEC_MOF-1_UFF_CO2_298.csv").write_text(
+        "# pressure[Pa],mean_volume[mol/kg],mean_error[mol/kg]\n"
+        "1.000000000000000000e+04,1.2,0.1\n"
+        "2.000000000000000000e+04,1.4,0.1\n",
+        encoding="utf-8",
+    )
+    (enthalpy_dir / "DDEC_MOF-1_UFF_CO2_298.csv").write_text(
+        "# pressure[Pa],enthalpy[kJ/mol]\n"
+        "1.000000000000000000e+04,30\n",
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "inspection"
+
+    manifest_path, pressure_path, column_map_path, summary_path = write_inspection_outputs(source_dir, output_dir)
+
+    manifest = pd.read_csv(manifest_path)
+    pressure = pd.read_csv(pressure_path)
+    assert set(manifest["data_kind"]) == {"enthalpy", "isotherm"}
+    assert pressure["pressure_bar"].tolist() == [0.1, 0.2]
+    column_map = json.loads(column_map_path.read_text(encoding="utf-8"))
+    assert column_map["pressure"][0]["converted_to"] == "pressure_bar"
+    summary = summary_path.read_text(encoding="utf-8")
+    assert "Parsed isotherm files: 1" in summary

@@ -16,6 +16,7 @@ data/processed/*
 !data/processed/.gitkeep
 
 exports/
+reports/crafted_archive_inspection/
 *.zip
 *.pkl
 *.joblib

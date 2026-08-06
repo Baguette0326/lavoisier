@@ -33,15 +33,15 @@ sources:
     local_path: "data/raw/nist_adsorption"
     notes: "Public JSON/XML/CSV APIs with DOI-traceable records. No blanket redistribution license was found on reviewed pages; digitized literature curves need record-level care."
 
-  crafted_2_0_0:
-    title: "CRAFTED 2.0.0 adsorption isotherm dataset"
+  crafted_2_0_1:
+    title: "CRAFTED 2.0.1 adsorption isotherm dataset"
     platform: "Zenodo"
-    reference: "https://doi.org/10.5281/zenodo.8190237"
+    reference: "https://doi.org/10.5281/zenodo.10120180"
     evidence_type: "computational GCMC"
-    status: "recommended_for_manual_approval_review"
+    status: "approved_for_local_download_not_for_git_commit"
     monitoring_method: "pinned Zenodo version and checksum"
-    local_path: "data/raw/crafted_2_0_0"
-    notes: "54.7 MB; CO2/N2 isotherms and enthalpies. Generated files are CDLA-Sharing-1.0; inherited MOF CIFs are CC BY 4.0. Do not download until human approval."
+    local_path: "data/raw/crafted_2_0_1"
+    notes: "55.1 MB; official bugfix release replacing MOF uptake and enthalpy values at 2 and 5 bar. CO2/N2 isotherms and enthalpies. Generated files are CDLA-Sharing-1.0; inherited MOF CIFs are CC BY 4.0; COF and RASPA-derived force-field files include MIT-licensed components. Raw data must stay out of Git."
 
   mofx_db:
     title: "MOFX-DB computational adsorption database"

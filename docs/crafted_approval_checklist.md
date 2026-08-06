@@ -6,24 +6,28 @@ not approved to use or redistribute.
 
 ## Dataset Target
 
-- Source: CRAFTED 2.0.0 adsorption isotherm dataset
+- Source: CRAFTED 2.0.1 adsorption isotherm dataset
 - Platform: Zenodo
-- DOI: `10.5281/zenodo.8190237`
-- Registry key: `crafted_2_0_0`
-- Current Lavoisier status: `recommended_for_manual_approval_review`
+- DOI: `10.5281/zenodo.10120180`
+- Registry key: `crafted_2_0_1`
+- Archive: `CRAFTED-2.0.1.tar.xz`
+- Expected MD5: `e11e4f84cdd484db7811bc758faaed37`
+- Current Lavoisier status: `approved_for_local_download_not_for_git_commit`
 
 ## Approval Gate
 
-Complete these before downloading or parsing the real archive:
+Completed for local-only download:
 
-- Confirm exact license for generated CRAFTED files.
-- Confirm exact license for inherited MOF structure files.
-- Confirm required attribution text.
-- Confirm whether raw data can be committed to Git.
-- Confirm whether processed slices can be committed to Git.
-- Confirm whether derived review exports can be shared publicly.
-- Record the archive URL, version, download date, and checksum.
-- Keep raw files untouched under `data/raw/crafted_2_0_0/` only if approved.
+- Generated CRAFTED files: `CDLA-Sharing-1.0`.
+- MOF-related inherited CIF lineage: `CC-BY-4.0` from CoRE-MOF-2014.
+- COF-related inherited CIF lineage: `MIT` from CURATED-COFs.
+- RASPA-derived gas definition files: `MIT`.
+- Raw data must not be committed to Git.
+- Processed slices and derived review exports require separate review before
+  public GitHub sharing.
+- Archive URL, version, download date, and checksum must be recorded after
+  download.
+- Keep raw files untouched under `data/raw/crafted_2_0_1/`.
 
 ## Archive Inspection Questions
 

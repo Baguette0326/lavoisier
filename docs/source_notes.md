@@ -32,12 +32,16 @@ Use case for Lavoisier:
 - material descriptor source;
 - not sufficient by itself unless adsorption target data is available.
 
-## CRAFTED 2.0.0
+## CRAFTED 2.0.1
 
 CRAFTED is the first real-data target for the MVP because it is directly aligned
-with computational CO2/N2 adsorption screening. It still requires manual
-approval before ingestion. Use `docs/crafted_approval_checklist.md` before any
-download, parser work, or processed-slice export.
+with computational CO2/N2 adsorption screening. The project now targets the
+official `2.0.1` Zenodo record because `2.0.0` has a newer bugfix release that
+replaces MOF uptake and enthalpy values at 2 and 5 bar.
+
+Local-only download is approved after source review. Raw CRAFTED files must stay
+out of Git. Processed slices and derived review exports require separate review
+before public GitHub sharing.
 
 Use case for Lavoisier:
 
