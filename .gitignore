@@ -17,6 +17,7 @@ data/processed/*
 
 exports/
 reports/crafted_archive_inspection/
+reports/crafted_real_slice_export*/
 *.zip
 *.pkl
 *.joblib

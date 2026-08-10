@@ -76,3 +76,27 @@ The first real parser should produce:
 - transformation log recording intended pressures, actual pressures, checksum,
   and the no-interpolation limitation
 
+## First Local Parser Run
+
+The first local parser run used:
+
+```text
+python scripts/run_crafted_real_slice.py
+```
+
+Outputs were written to ignored local folders:
+
+- `data/processed/crafted_2_0_1/`
+- `reports/crafted_real_slice_export/`
+
+Run result:
+
+- long records: 2,714
+- screening records: 1,352
+- parser-blocked records: 5
+- ranked records: 1,352
+- backend-blocked records: 0
+
+The 5 parser-blocked records had non-positive uptake values that would make
+CO2/N2 selectivity undefined or infinite. They were excluded from the official
+ranked table under `block_type = invalid_selectivity_denominator`.

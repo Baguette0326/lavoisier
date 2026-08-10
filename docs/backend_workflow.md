@@ -109,6 +109,37 @@ This step does not ingest or rank real data. It only shows what files, columns,
 gases, pressures, and conditions are available so the first exact-match slice
 can be chosen responsibly.
 
+## Real CRAFTED Slice Command
+
+After local approval, download, extraction, and archive inspection, run the
+selected exact slice:
+
+```bash
+python scripts/run_crafted_real_slice.py
+```
+
+The current selected slice is:
+
+```text
+CO2 = 0.2 bar
+N2 = 1.0 bar
+T = 298 K
+force field = UFF
+charge method = DDEC
+```
+
+The command writes ignored local outputs:
+
+```text
+data/processed/crafted_2_0_1/crafted_isotherm_long.csv
+data/processed/crafted_2_0_1/crafted_screening_slice.csv
+data/processed/crafted_2_0_1/crafted_parser_blocked_records.csv
+reports/crafted_real_slice_export/
+```
+
+Do not commit those real processed outputs until public-sharing rights are
+reviewed separately.
+
 ## Next Backend Milestones
 
 1. Complete `docs/crafted_approval_checklist.md` before downloading or parsing
@@ -116,10 +147,12 @@ can be chosen responsibly.
 2. Run `scripts/inspect_crafted_archive.py` on the approved local archive.
 3. Choose exact CRAFTED force field, charge method, temperature, and pressure
    pair after archive inspection.
-4. Replace the synthetic fixture with a small approved processed CRAFTED slice.
-5. Replace the synthetic transformation log with one backed by approved CRAFTED
+4. Run `scripts/run_crafted_real_slice.py` locally and review generated outputs.
+5. Replace the synthetic fixture with a small approved processed CRAFTED slice
+   only after processed-data sharing is approved.
+6. Replace the synthetic transformation log with one backed by approved CRAFTED
    archive checksums and inspected source-file lineage.
-6. Only then improve the UI around this backend.
+7. Only then improve the UI around this backend.
 
 ## Roadmap Concepts After Provenance
 

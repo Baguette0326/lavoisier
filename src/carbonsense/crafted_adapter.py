@@ -1,13 +1,13 @@
-"""CRAFTED dataset adapter skeleton.
+"""CRAFTED dataset adapter.
 
-This module defines the controlled MVP slice for CRAFTED 2.0.0 without
-downloading or parsing the real archive. Real ingestion must wait for human
-license/provenance approval and archive inspection.
+This module supports the synthetic CRAFTED-like fixture and the first local-only
+CRAFTED 2.0.1 parser slice. Real CRAFTED raw data remains outside Git.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import pandas as pd
 
@@ -36,6 +36,238 @@ class CraftedSliceConfig:
     temperature_k: float = 298.0
     force_field: str | None = None
     charge_method: str | None = None
+    co2_pressure_bar: float | None = None
+    n2_pressure_bar: float | None = None
+
+
+@dataclass(frozen=True)
+class CraftedRealSliceConfig:
+    """Exact-match parser target for a local CRAFTED 2.0.1 slice."""
+
+    temperature_k: int = 298
+    force_field: str = "UFF"
+    charge_method: str = "DDEC"
+    co2_pressure_bar: float = 0.2
+    n2_pressure_bar: float = 1.0
+    source_version: str = "CRAFTED 2.0.1"
+    capture_context: str = "post-combustion"
+
+
+def _crafted_result_path(
+    root: Path,
+    *,
+    section: str,
+    material_id: str,
+    gas: str,
+    config: CraftedRealSliceConfig,
+) -> Path:
+    filename = f"{config.charge_method}_{material_id}_{config.force_field}_{gas}_{config.temperature_k}.csv"
+    return root / section / filename
+
+
+def _read_exact_pressure_row(path: Path, target_pressure_bar: float) -> dict[str, float] | None:
+    """Read one exact pressure row from a CRAFTED result CSV."""
+    target_pressure_pa = target_pressure_bar * 100000.0
+    with path.open("r", encoding="utf-8", errors="ignore") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if line.startswith("#") or not line.strip():
+                continue
+            parts = line.strip().split(",")
+            if len(parts) < 2:
+                continue
+            try:
+                pressure_pa = float(parts[0])
+                value = float(parts[1])
+                uncertainty = float(parts[2]) if len(parts) > 2 else float("nan")
+            except ValueError:
+                continue
+            if abs(pressure_pa - target_pressure_pa) <= 1e-6:
+                return {
+                    "pressure_bar": pressure_pa / 100000.0,
+                    "value": value,
+                    "uncertainty": uncertainty,
+                    "line_number": float(line_number),
+                }
+    return None
+
+
+def _material_ids_for_config(root: Path, config: CraftedRealSliceConfig) -> list[str]:
+    pattern = f"{config.charge_method}_*_{config.force_field}_CO2_{config.temperature_k}.csv"
+    material_ids: list[str] = []
+    for path in sorted((root / "ISOTHERM_FILES").glob(pattern)):
+        if path.name.startswith("._"):
+            continue
+        prefix = f"{config.charge_method}_"
+        suffix = f"_{config.force_field}_CO2_{config.temperature_k}.csv"
+        material_ids.append(path.name.removeprefix(prefix).removesuffix(suffix))
+    return material_ids
+
+
+def parse_crafted_isotherm_long(
+    root: Path,
+    config: CraftedRealSliceConfig = CraftedRealSliceConfig(),
+    *,
+    limit: int | None = None,
+) -> pd.DataFrame:
+    """Parse selected exact CO2/N2 pressure points into a long table."""
+    rows: list[dict[str, object]] = []
+    material_ids = _material_ids_for_config(root, config)
+    if limit is not None:
+        material_ids = material_ids[:limit]
+
+    gas_targets = {"CO2": config.co2_pressure_bar, "N2": config.n2_pressure_bar}
+    for material_id in material_ids:
+        for gas, target_pressure in gas_targets.items():
+            path = _crafted_result_path(root, section="ISOTHERM_FILES", material_id=material_id, gas=gas, config=config)
+            if not path.exists():
+                continue
+            value_row = _read_exact_pressure_row(path, target_pressure)
+            if value_row is None:
+                continue
+            rows.append(
+                {
+                    "material_id": material_id,
+                    "material_class": "MOF",
+                    "evidence_type": "computational_gcmc",
+                    "simulation_method": "GCMC",
+                    "force_field": config.force_field,
+                    "charge_method": config.charge_method,
+                    "source": config.source_version,
+                    "capture_context": config.capture_context,
+                    "temperature_k": config.temperature_k,
+                    "gas": gas,
+                    "pressure_bar": value_row["pressure_bar"],
+                    "uptake_mmol_g": value_row["value"],
+                    "uptake_error_mmol_g": value_row["uncertainty"],
+                    "source_file": str(path.relative_to(root)),
+                    "source_record_id": f"{path.name}:line:{int(value_row['line_number'])}",
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def _read_heat_of_adsorption(
+    root: Path,
+    material_id: str,
+    config: CraftedRealSliceConfig,
+) -> tuple[float | None, str | None, str | None]:
+    path = _crafted_result_path(root, section="ENTHALPY_FILES", material_id=material_id, gas="CO2", config=config)
+    if not path.exists():
+        return None, None, None
+    value_row = _read_exact_pressure_row(path, config.co2_pressure_bar)
+    if value_row is None:
+        return None, str(path.relative_to(root)), None
+    return (
+        abs(value_row["value"]),
+        str(path.relative_to(root)),
+        f"{path.name}:line:{int(value_row['line_number'])}",
+    )
+
+
+def build_crafted_screening_slice(
+    long_table: pd.DataFrame,
+    root: Path,
+    config: CraftedRealSliceConfig = CraftedRealSliceConfig(),
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Derive one-row-per-material screening records and missing-pair blocks."""
+    if long_table.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    rows: list[dict[str, object]] = []
+    blocked_rows: list[dict[str, object]] = []
+    for material_id, group in long_table.groupby("material_id", sort=True):
+        co2 = group[(group["gas"] == "CO2") & (group["pressure_bar"] == config.co2_pressure_bar)]
+        n2 = group[(group["gas"] == "N2") & (group["pressure_bar"] == config.n2_pressure_bar)]
+        if co2.empty or n2.empty:
+            missing = []
+            if co2.empty:
+                missing.append("CO2")
+            if n2.empty:
+                missing.append("N2")
+            blocked_rows.append(
+                {
+                    "material_id": material_id,
+                    "material_class": "MOF",
+                    "evidence_type": "computational_gcmc",
+                    "simulation_method": "GCMC",
+                    "force_field": config.force_field,
+                    "charge_method": config.charge_method,
+                    "source": config.source_version,
+                    "capture_context": config.capture_context,
+                    "temperature_k": config.temperature_k,
+                    "pressure_bar": config.co2_pressure_bar,
+                    "block_type": "incomplete_pair",
+                    "block_reason": f"missing matched {'/'.join(missing)} point for selected exact pressure pair",
+                    "rank_eligible": False,
+                }
+            )
+            continue
+
+        co2_row = co2.iloc[0]
+        n2_row = n2.iloc[0]
+        if co2_row["uptake_mmol_g"] <= 0 or n2_row["uptake_mmol_g"] <= 0:
+            blocked_rows.append(
+                {
+                    "material_id": material_id,
+                    "material_class": "MOF",
+                    "evidence_type": "computational_gcmc",
+                    "simulation_method": "GCMC",
+                    "force_field": config.force_field,
+                    "charge_method": config.charge_method,
+                    "source": config.source_version,
+                    "capture_context": config.capture_context,
+                    "temperature_k": config.temperature_k,
+                    "pressure_bar": config.co2_pressure_bar,
+                    "block_type": "invalid_selectivity_denominator",
+                    "block_reason": "CO2/N2 selectivity requires positive matched CO2 and N2 uptake values",
+                    "rank_eligible": False,
+                }
+            )
+            continue
+        heat, heat_source_file, heat_source_record_id = _read_heat_of_adsorption(root, material_id, config)
+        selectivity = (co2_row["uptake_mmol_g"] / n2_row["uptake_mmol_g"]) / (
+            config.co2_pressure_bar / config.n2_pressure_bar
+        )
+        rows.append(
+            {
+                "material_id": material_id,
+                "material_class": "MOF",
+                "evidence_type": "computational_gcmc",
+                "simulation_method": "GCMC",
+                "force_field": config.force_field,
+                "charge_method": config.charge_method,
+                "source": config.source_version,
+                "capture_context": config.capture_context,
+                "temperature_k": config.temperature_k,
+                "pressure_bar": config.co2_pressure_bar,
+                "co2_pressure_bar": config.co2_pressure_bar,
+                "n2_pressure_bar": config.n2_pressure_bar,
+                "co2_uptake_mmol_g": co2_row["uptake_mmol_g"],
+                "n2_uptake_mmol_g": n2_row["uptake_mmol_g"],
+                "co2_n2_selectivity": selectivity,
+                "heat_of_adsorption_kj_mol": heat,
+                "co2_source_file": co2_row["source_file"],
+                "co2_source_record_id": co2_row["source_record_id"],
+                "n2_source_file": n2_row["source_file"],
+                "n2_source_record_id": n2_row["source_record_id"],
+                "heat_source_file": heat_source_file,
+                "heat_source_record_id": heat_source_record_id,
+                "humidity_condition": "dry simulation",
+            }
+        )
+    return pd.DataFrame(rows), pd.DataFrame(blocked_rows)
+
+
+def parse_crafted_real_slice(
+    root: Path,
+    config: CraftedRealSliceConfig = CraftedRealSliceConfig(),
+    *,
+    limit: int | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Parse the first approved local CRAFTED slice into long/screening/blocked tables."""
+    long_table = parse_crafted_isotherm_long(root, config, limit=limit)
+    screening, blocked = build_crafted_screening_slice(long_table, root, config)
+    return long_table, screening, blocked
 
 
 def validate_crafted_like_table(frame: pd.DataFrame) -> list[str]:
