@@ -100,3 +100,34 @@ Run result:
 The 5 parser-blocked records had non-positive uptake values that would make
 CO2/N2 selectivity undefined or infinite. They were excluded from the official
 ranked table under `block_type = invalid_selectivity_denominator`.
+
+## First Local ML Triage Run
+
+The first local weakly supervised ML triage run used:
+
+```text
+python scripts/run_ml_triage.py
+```
+
+Outputs were written to the ignored local folder:
+
+- `reports/crafted_ml_triage/`
+
+Run result:
+
+- classified records: 1,352
+- model: `RandomForestClassifier`
+- label source: weak supervision from transparent engineering rules
+- holdout accuracy against rule-derived labels: 0.9970
+
+Rule-derived class counts:
+
+- `promising_candidate`: 19
+- `balanced_candidate`: 218
+- `rank_ready`: 338
+- `poor_selectivity`: 553
+- `low_capacity`: 224
+
+This classifier is a review aid only. It learns the rule-derived triage labels;
+it does not prove experimental success and does not override measured ranking,
+comparability checks, or human review.

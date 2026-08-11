@@ -21,6 +21,7 @@ source registry
   -> comparability engine
   -> rank eligibility
   -> ranking
+  -> weakly supervised ML triage
   -> exportable review tables
   -> transformation/provenance log
 ```
@@ -140,6 +141,27 @@ reports/crafted_real_slice_export/
 Do not commit those real processed outputs until public-sharing rights are
 reviewed separately.
 
+## ML Triage Command
+
+After the measured/rule-based slice has been exported locally, run candidate
+classification:
+
+```bash
+python scripts/run_ml_triage.py
+```
+
+The ML triage layer uses weak supervision: transparent engineering rules create
+candidate review labels, then a `RandomForestClassifier` learns those labels
+from tabular screening features. This is a review aid only. It does not replace
+comparability checks, measured ranking, or human review.
+
+Ignored local outputs:
+
+```text
+reports/crafted_ml_triage/classified_records.csv
+reports/crafted_ml_triage/ml_triage_summary.json
+```
+
 ## Next Backend Milestones
 
 1. Complete `docs/crafted_approval_checklist.md` before downloading or parsing
@@ -152,7 +174,8 @@ reviewed separately.
    only after processed-data sharing is approved.
 6. Replace the synthetic transformation log with one backed by approved CRAFTED
    archive checksums and inspected source-file lineage.
-7. Only then improve the UI around this backend.
+7. Review weakly supervised ML triage output as a secondary review aid.
+8. Only then improve the UI around this backend.
 
 ## Roadmap Concepts After Provenance
 
