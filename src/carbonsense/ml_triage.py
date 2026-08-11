@@ -27,7 +27,6 @@ NUMERIC_FEATURES = [
     "temperature_k",
     "co2_pressure_bar",
     "n2_pressure_bar",
-    "screening_score",
 ]
 
 CATEGORICAL_FEATURES = [
@@ -146,9 +145,9 @@ def _build_classifier(numeric_features: list[str], categorical_features: list[st
     return Pipeline(steps=[("preprocessor", preprocessor), ("classifier", model)])
 
 
-def _can_stratify(labels: pd.Series) -> bool:
+def _can_split(labels: pd.Series, test_fraction: float) -> bool:
     counts = labels.value_counts()
-    test_size = max(1, int(np.ceil(len(labels) * 0.25)))
+    test_size = max(1, int(np.ceil(len(labels) * test_fraction)))
     return len(counts) > 1 and counts.min() >= 2 and test_size >= len(counts)
 
 
@@ -180,29 +179,58 @@ def classify_candidates(frame: pd.DataFrame) -> CandidateClassifierResult:
         "label_source": "weak_supervision_rule_derived",
         "record_count": int(len(training_frame)),
         "feature_columns": numeric_features + categorical_features,
+        "excluded_training_columns": ["screening_score"],
         "class_counts": {key: int(value) for key, value in labels.value_counts().sort_index().items()},
         "model": "RandomForestClassifier",
+        "split_policy": "60/20/20 stratified train/validation/test when class counts support it",
         "official_ranking_policy": "ML classes are review aids; measured ranking and comparability remain authoritative.",
     }
 
-    if len(training_frame) >= 10 and _can_stratify(labels):
-        X_train, X_test, y_train, y_test = train_test_split(
+    if len(training_frame) >= 15 and _can_split(labels, 0.20):
+        X_train_valid, X_test, y_train_valid, y_test = train_test_split(
             X,
             labels,
-            test_size=0.25,
+            test_size=0.20,
             random_state=42,
             stratify=labels,
         )
+        if _can_split(y_train_valid, 0.25):
+            X_train, X_valid, y_train, y_valid = train_test_split(
+                X_train_valid,
+                y_train_valid,
+                test_size=0.25,
+                random_state=42,
+                stratify=y_train_valid,
+            )
+        else:
+            X_train, X_valid, y_train, y_valid = X_train_valid, X_test, y_train_valid, y_test
+            metrics["validation_note"] = "Validation split reused test holdout because class counts were too small."
+
         classifier.fit(X_train, y_train)
-        predicted = classifier.predict(X_test)
-        metrics["holdout_accuracy"] = float(accuracy_score(y_test, predicted))
-        metrics["holdout_report"] = classification_report(y_test, predicted, output_dict=True, zero_division=0)
+        valid_predicted = classifier.predict(X_valid)
+        test_predicted = classifier.predict(X_test)
+        metrics["train_count"] = int(len(X_train))
+        metrics["validation_count"] = int(len(X_valid))
+        metrics["test_count"] = int(len(X_test))
+        metrics["validation_accuracy"] = float(accuracy_score(y_valid, valid_predicted))
+        metrics["test_accuracy"] = float(accuracy_score(y_test, test_predicted))
+        metrics["validation_report"] = classification_report(y_valid, valid_predicted, output_dict=True, zero_division=0)
+        metrics["test_report"] = classification_report(y_test, test_predicted, output_dict=True, zero_division=0)
+        metrics["holdout_accuracy"] = metrics["test_accuracy"]
+        metrics["holdout_report"] = metrics["test_report"]
         classifier.fit(X, labels)
     else:
         classifier.fit(X, labels)
+        metrics["train_count"] = int(len(X))
+        metrics["validation_count"] = 0
+        metrics["test_count"] = 0
+        metrics["validation_accuracy"] = None
+        metrics["test_accuracy"] = None
+        metrics["validation_report"] = None
+        metrics["test_report"] = None
         metrics["holdout_accuracy"] = None
         metrics["holdout_report"] = None
-        metrics["holdout_note"] = "Not enough labelled examples per class for stratified holdout evaluation."
+        metrics["holdout_note"] = "Not enough labelled examples per class for stratified train/validation/test evaluation."
 
     predicted_labels = classifier.predict(labelled[numeric_features + categorical_features])
     probabilities = classifier.predict_proba(labelled[numeric_features + categorical_features])

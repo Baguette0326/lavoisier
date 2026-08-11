@@ -86,3 +86,47 @@ def test_classify_candidates_adds_ml_review_columns() -> None:
     assert "candidate_class_features" in result.classified_records.columns
     assert result.training_summary["label_source"] == "weak_supervision_rule_derived"
     assert result.training_summary["record_count"] == 12
+    assert "screening_score" not in result.training_summary["feature_columns"]
+    assert result.training_summary["excluded_training_columns"] == ["screening_score"]
+    assert result.training_summary["train_count"] == 12
+    assert result.training_summary["validation_count"] == 0
+    assert result.training_summary["test_count"] == 0
+
+
+def test_classify_candidates_reports_train_validation_test_split() -> None:
+    rows = []
+    patterns = [
+        ("promising", 5.0, 0.1, 50.0, 40.0, 0.8),
+        ("balanced", 2.5, 0.1, 30.0, 45.0, 0.5),
+        ("low", 0.6, 0.1, 20.0, 35.0, 0.2),
+        ("poor", 3.0, 0.1, 8.0, 40.0, 0.3),
+    ]
+    for label, uptake, n2_uptake, selectivity, heat, score in patterns:
+        for index in range(10):
+            rows.append(
+                {
+                    "material_id": f"{label}-{index}",
+                    "rank_eligible": True,
+                    "co2_uptake_mmol_g": uptake + index * 0.01,
+                    "n2_uptake_mmol_g": n2_uptake,
+                    "co2_n2_selectivity": selectivity,
+                    "heat_of_adsorption_kj_mol": heat,
+                    "screening_score": score,
+                    "temperature_k": 298,
+                    "co2_pressure_bar": 0.2,
+                    "n2_pressure_bar": 1.0,
+                    "force_field": "UFF",
+                    "charge_method": "DDEC",
+                    "evidence_type": "computational_gcmc",
+                    "simulation_method": "GCMC",
+                }
+            )
+    frame = pd.DataFrame(rows)
+
+    result = classify_candidates(frame)
+
+    assert result.training_summary["train_count"] == 24
+    assert result.training_summary["validation_count"] == 8
+    assert result.training_summary["test_count"] == 8
+    assert result.training_summary["validation_accuracy"] is not None
+    assert result.training_summary["test_accuracy"] is not None

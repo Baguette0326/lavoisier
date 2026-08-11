@@ -113,7 +113,7 @@ Outputs were written to the ignored local folder:
 
 - `reports/crafted_ml_triage/`
 
-Run result:
+Initial run result:
 
 - classified records: 1,352
 - model: `RandomForestClassifier`
@@ -131,3 +131,14 @@ Rule-derived class counts:
 This classifier is a review aid only. It learns the rule-derived triage labels;
 it does not prove experimental success and does not override measured ranking,
 comparability checks, or human review.
+
+The ML evaluation was then tightened to reduce leakage:
+
+- `screening_score` is excluded from ML training features
+- train/validation/test split: 810 / 271 / 271
+- validation accuracy against rule-derived labels: 0.9926
+- test accuracy against rule-derived labels: 0.9889
+
+The remaining high accuracy is expected because labels are weak-supervision
+targets created by rules. It should be presented as internal consistency of the
+triage model, not as proof that candidates will succeed experimentally.
