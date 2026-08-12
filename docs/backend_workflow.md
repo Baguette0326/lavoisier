@@ -219,6 +219,7 @@ Ignored local outputs:
 ```text
 reports/unfamiliar_candidate_triage/nearest_neighbors.csv
 reports/unfamiliar_candidate_triage/candidate_similarity_summary.json
+reports/unfamiliar_candidate_triage/candidate_review_report.md
 ```
 
 The summary includes metric percentiles for CO2 uptake and CO2/N2 selectivity,
@@ -235,6 +236,11 @@ known alternatives.
 `next_experiment_steps` turns the verdict into a small virtual-lab work order.
 These steps are not automatic lab instructions; they identify the next evidence
 that would make the candidate decision less uncertain.
+
+`candidate_review_report.md` is the human-readable export. It summarizes the
+candidate verdict, metric benchmarks, nearest-neighbor comparison, nearest
+known records, next experiment steps, and limitations for review without
+opening the raw JSON.
 
 ## Next Backend Milestones
 
