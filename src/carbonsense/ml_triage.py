@@ -206,6 +206,43 @@ def _frame_with_feature_columns(frame: pd.DataFrame, feature_columns: list[str])
     return result[feature_columns]
 
 
+def _rd_recommendation(
+    predicted_class: str,
+    confidence: float,
+    nearest_distance: float,
+    warnings: list[str],
+) -> tuple[str, str]:
+    if warnings:
+        return (
+            "review_with_caution",
+            "candidate has missing descriptors or is outside the familiar reference space",
+        )
+    if nearest_distance > 3:
+        return (
+            "review_with_caution",
+            "nearest known MOF is far away, so neighbor evidence is weak",
+        )
+    if predicted_class == "promising_candidate" and confidence >= 0.6:
+        return (
+            "prioritize_deeper_review",
+            "candidate resembles known promising records with enough neighbor agreement",
+        )
+    if predicted_class in {"balanced_candidate", "rank_ready", "promising_candidate"}:
+        return (
+            "consider_for_deeper_review",
+            "candidate resembles usable known records, but evidence is not strong enough to prioritize",
+        )
+    if predicted_class in {"poor_selectivity", "low_capacity", "high_regeneration_risk"}:
+        return (
+            "deprioritize_until_new_evidence",
+            "candidate resembles known records with a first-pass screening limitation",
+        )
+    return (
+        "manual_review_required",
+        "candidate resembles records that require missing-data or comparability review",
+    )
+
+
 def triage_unfamiliar_candidate(
     reference_frame: pd.DataFrame,
     candidate: pd.Series | dict[str, object],
@@ -264,6 +301,12 @@ def triage_unfamiliar_candidate(
         )
     if neighbor_distances[0] > 3:
         warnings.append("Nearest known MOF is far in feature space; treat the prediction as low-confidence.")
+    recommendation, recommendation_reason = _rd_recommendation(
+        predicted_class,
+        confidence,
+        float(neighbor_distances[0]),
+        warnings,
+    )
 
     summary = {
         "method": "KNearestNeighbors similarity triage",
@@ -274,6 +317,8 @@ def triage_unfamiliar_candidate(
         "predicted_candidate_class": predicted_class,
         "prediction_confidence": round(float(confidence), 4),
         "nearest_distance": round(float(neighbor_distances[0]), 4),
+        "rd_recommendation": recommendation,
+        "rd_recommendation_reason": recommendation_reason,
         "class_weight_vote": {key: round(value, 4) for key, value in sorted(class_weights.items())},
         "warnings": warnings,
         "official_use_policy": "Similarity triage is a review aid; it suggests whether deeper simulation or lab review is justified.",

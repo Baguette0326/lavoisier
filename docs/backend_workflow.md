@@ -180,6 +180,9 @@ It returns:
 - similarity distances and distance-derived vote weights;
 - a predicted review class, such as `promising_candidate`,
   `balanced_candidate`, `poor_selectivity`, or `low_capacity`;
+- a cautious R&D recommendation, such as `prioritize_deeper_review`,
+  `consider_for_deeper_review`, `review_with_caution`, or
+  `deprioritize_until_new_evidence`;
 - warnings when the candidate is missing descriptors or appears far from the
   known reference space.
 

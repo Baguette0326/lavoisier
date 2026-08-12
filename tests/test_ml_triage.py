@@ -173,6 +173,7 @@ def test_triage_unfamiliar_candidate_finds_similar_known_mofs() -> None:
 
     assert result.prediction_summary["method"] == "KNearestNeighbors similarity triage"
     assert result.prediction_summary["predicted_candidate_class"] == "promising_candidate"
+    assert result.prediction_summary["rd_recommendation"] == "prioritize_deeper_review"
     assert result.prediction_summary["k_used"] == 3
     assert list(result.neighbor_records["material_id"][:2]) == ["strong-a", "strong-b"]
     assert "similarity_distance" in result.neighbor_records.columns
@@ -188,5 +189,6 @@ def test_triage_unfamiliar_candidate_warns_about_missing_descriptors() -> None:
     result = triage_unfamiliar_candidate(_similarity_reference_frame(), candidate, k=2)
 
     assert result.prediction_summary["k_used"] == 2
+    assert result.prediction_summary["rd_recommendation"] == "review_with_caution"
     assert result.prediction_summary["warnings"]
     assert "n2_uptake_mmol_g" in result.prediction_summary["warnings"][0]
