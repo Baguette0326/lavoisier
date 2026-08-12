@@ -186,6 +186,9 @@ It returns:
 - a benchmark verdict comparing the candidate's core metrics against known
   records, such as `above_reference_candidate`, `competitive_with_reference`,
   `mixed_against_reference`, or `below_reference_or_risky`;
+- next experiment steps, such as completing missing descriptors, checking
+  regeneration risk, validating CO2/N2 selectivity, comparing against nearest
+  neighbors under identical assumptions, or adding humidity/cycling evidence;
 - warnings when the candidate is missing descriptors or appears far from the
   known reference space.
 
@@ -220,6 +223,10 @@ plus a first-pass heat-of-adsorption target-range check. These benchmarks are
 separate from nearest-neighbor similarity: they help answer whether the
 candidate is merely similar to known materials or actually competitive against
 the reference distribution.
+
+`next_experiment_steps` turns the verdict into a small virtual-lab work order.
+These steps are not automatic lab instructions; they identify the next evidence
+that would make the candidate decision less uncertain.
 
 ## Next Backend Milestones
 

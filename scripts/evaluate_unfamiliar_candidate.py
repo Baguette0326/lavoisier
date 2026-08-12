@@ -73,6 +73,9 @@ def main() -> None:
     print(f"Benchmark verdict: {result.prediction_summary['benchmark_verdict']}")
     print(f"Confidence: {result.prediction_summary['prediction_confidence']}")
     print(f"Nearest distance: {result.prediction_summary['nearest_distance']}")
+    print("Next experiment steps:")
+    for step in result.prediction_summary["next_experiment_steps"][:2]:
+        print(f"  - [{step['priority']}] {step['action']}: {step['reason']}")
     for warning in result.prediction_summary["warnings"]:
         print(f"Warning: {warning}")
     print(f"Wrote {display_path(neighbors_path)}")

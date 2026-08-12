@@ -179,6 +179,9 @@ def test_triage_unfamiliar_candidate_finds_similar_known_mofs() -> None:
     assert result.prediction_summary["metric_benchmarks"]["heat_of_adsorption_kj_mol"]["target_status"] == (
         "inside_first_pass_target_range"
     )
+    assert result.prediction_summary["next_experiment_steps"][0]["action"] == (
+        "test_neighbor_sensitivity_under_same_conditions"
+    )
     assert result.prediction_summary["k_used"] == 3
     assert list(result.neighbor_records["material_id"][:2]) == ["strong-a", "strong-b"]
     assert "similarity_distance" in result.neighbor_records.columns
@@ -196,5 +199,6 @@ def test_triage_unfamiliar_candidate_warns_about_missing_descriptors() -> None:
     assert result.prediction_summary["k_used"] == 2
     assert result.prediction_summary["rd_recommendation"] == "review_with_caution"
     assert result.prediction_summary["benchmark_verdict"] == "insufficient_metric_benchmark"
+    assert result.prediction_summary["next_experiment_steps"][0]["action"] == "complete_candidate_descriptor_set"
     assert result.prediction_summary["warnings"]
     assert "n2_uptake_mmol_g" in result.prediction_summary["warnings"][0]

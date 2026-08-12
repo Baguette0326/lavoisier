@@ -303,6 +303,71 @@ def _metric_benchmarks(reference: pd.DataFrame, candidate_frame: pd.DataFrame) -
     return benchmarks, verdict
 
 
+def _next_experiment_steps(
+    predicted_class: str,
+    benchmark_verdict: str,
+    metric_benchmarks: dict[str, object],
+    warnings: list[str],
+) -> list[dict[str, str]]:
+    steps: list[dict[str, str]] = []
+    if warnings:
+        steps.append(
+            {
+                "priority": "high",
+                "action": "complete_candidate_descriptor_set",
+                "reason": "similarity and benchmark verdicts are less reliable while required descriptors are missing",
+            }
+        )
+        return steps
+
+    heat_detail = metric_benchmarks.get("heat_of_adsorption_kj_mol", {})
+    heat_status = heat_detail.get("target_status") if isinstance(heat_detail, dict) else None
+    if heat_status == "above_first_pass_target_range" or predicted_class == "high_regeneration_risk":
+        steps.append(
+            {
+                "priority": "high",
+                "action": "check_regeneration_energy_or_heat_of_adsorption",
+                "reason": "candidate may bind CO2 too strongly for economical regeneration",
+            }
+        )
+
+    if predicted_class == "poor_selectivity" or benchmark_verdict == "below_reference_or_risky":
+        steps.append(
+            {
+                "priority": "high",
+                "action": "rerun_or_validate_co2_n2_selectivity",
+                "reason": "candidate may not separate CO2 from N2 well enough under the selected slice",
+            }
+        )
+    elif benchmark_verdict in {"above_reference_candidate", "competitive_with_reference"}:
+        steps.append(
+            {
+                "priority": "medium",
+                "action": "test_neighbor_sensitivity_under_same_conditions",
+                "reason": "candidate looks competitive, so compare it against nearest known MOFs under identical assumptions",
+            }
+        )
+
+    if predicted_class in {"promising_candidate", "balanced_candidate"} and benchmark_verdict != "below_reference_or_risky":
+        steps.append(
+            {
+                "priority": "medium",
+                "action": "add_humidity_or_cycling_stability_evidence",
+                "reason": "dry CO2/N2 screening is not enough to justify lab prioritization by itself",
+            }
+        )
+
+    if not steps:
+        steps.append(
+            {
+                "priority": "medium",
+                "action": "manual_domain_review",
+                "reason": "candidate result is mixed or ordinary, so expert review should decide whether more data is worth collecting",
+            }
+        )
+    return steps
+
+
 def triage_unfamiliar_candidate(
     reference_frame: pd.DataFrame,
     candidate: pd.Series | dict[str, object],
@@ -368,6 +433,7 @@ def triage_unfamiliar_candidate(
         float(neighbor_distances[0]),
         warnings,
     )
+    next_steps = _next_experiment_steps(predicted_class, benchmark_verdict, metric_benchmarks, warnings)
 
     summary = {
         "method": "KNearestNeighbors similarity triage",
@@ -382,6 +448,7 @@ def triage_unfamiliar_candidate(
         "metric_benchmarks": metric_benchmarks,
         "rd_recommendation": recommendation,
         "rd_recommendation_reason": recommendation_reason,
+        "next_experiment_steps": next_steps,
         "class_weight_vote": {key: round(value, 4) for key, value in sorted(class_weights.items())},
         "warnings": warnings,
         "official_use_policy": "Similarity triage is a review aid; it suggests whether deeper simulation or lab review is justified.",
