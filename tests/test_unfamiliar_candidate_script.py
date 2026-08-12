@@ -96,6 +96,7 @@ def test_evaluate_unfamiliar_candidate_script_writes_review_packet(tmp_path: Pat
     assert "Benchmark verdict: above_reference_candidate" in completed.stdout
     assert "Neighbor advantage: candidate_advantage_over_neighbors" in completed.stdout
     assert "Descriptor-predicted properties:" in completed.stdout
+    assert "Supplied vs descriptor-predicted status:" in completed.stdout
     assert "Descriptor coverage: 6/6 candidate descriptors, 5/5 reference rows with descriptors" in completed.stdout
     assert "Next experiment steps:" in completed.stdout
     assert "test_neighbor_sensitivity_under_same_conditions" in completed.stdout
@@ -109,6 +110,7 @@ def test_evaluate_unfamiliar_candidate_script_writes_review_packet(tmp_path: Pat
     assert "R&D recommendation: `prioritize_deeper_review`" in report
     assert "## Metric Benchmarks" in report
     assert "## Descriptor-Predicted Properties" in report
+    assert "## Supplied Vs Descriptor-Predicted Metrics" in report
     assert "## Descriptor Coverage" in report
     assert "## Neighbor Comparison" in report
     assert "## Nearest Neighbors" in report
@@ -126,4 +128,9 @@ def test_evaluate_unfamiliar_candidate_script_writes_review_packet(tmp_path: Pat
     assert predictions["co2_uptake_mmol_g"] is not None
     assert property_summary["candidate_descriptor_count"] == 6
     assert "target adsorption metrics excluded" in property_summary["feature_policy"]
+    assert property_summary["supplied_prediction_comparison"]["co2_uptake_mmol_g"]["status"] in {
+        "consistent_with_descriptor_prediction",
+        "moderate_supplied_prediction_gap",
+        "large_supplied_prediction_gap",
+    }
     assert neighbors["material_id"].tolist() == ["strong-d", "strong-a"]

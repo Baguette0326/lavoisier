@@ -47,6 +47,27 @@ def _format_value(value: object) -> str:
     return str(value)
 
 
+def _format_supplied_prediction_comparison_table(comparisons: dict[str, object]) -> list[str]:
+    lines = [
+        "| Target | Supplied value | Descriptor-predicted value | Delta | Status |",
+        "| --- | ---: | ---: | ---: | --- |",
+    ]
+    if not comparisons:
+        return lines + ["| No supplied/predicted comparison available |  |  |  |  |"]
+    for target, raw_detail in comparisons.items():
+        detail = raw_detail if isinstance(raw_detail, dict) else {}
+        lines.append(
+            "| {target} | {supplied} | {predicted} | {delta} | {status} |".format(
+                target=target,
+                supplied=detail.get("supplied_value", ""),
+                predicted=detail.get("predicted_value", ""),
+                delta=detail.get("delta_supplied_minus_predicted", ""),
+                status=detail.get("status", ""),
+            )
+        )
+    return lines
+
+
 def build_markdown_report(
     candidate: dict[str, object],
     predicted_properties: dict[str, float | None],
@@ -76,6 +97,8 @@ def build_markdown_report(
             )
         )
 
+    lines.extend(["", "## Supplied Vs Descriptor-Predicted Metrics", ""])
+    lines.extend(_format_supplied_prediction_comparison_table(summary.get("supplied_prediction_comparison", {})))
     lines.extend(
         [
             "",
@@ -128,6 +151,12 @@ def main() -> None:
     print("Predicted properties:")
     for target, value in result.predicted_properties.items():
         print(f"  {target}: {_format_value(value)}")
+    comparison = result.prediction_summary.get("supplied_prediction_comparison", {})
+    if comparison:
+        print("Supplied vs descriptor-predicted status:")
+        for target, detail in comparison.items():
+            status = detail.get("status") if isinstance(detail, dict) else ""
+            print(f"  {target}: {status}")
     print(
         "Descriptor coverage: "
         f"{result.prediction_summary['candidate_descriptor_count']}/"

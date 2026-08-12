@@ -323,6 +323,12 @@ The standalone command is useful when testing the prediction model by itself.
 For normal candidate review, `scripts/evaluate_unfamiliar_candidate.py` already
 includes these descriptor-predicted properties in the unified review packet.
 
+When a candidate JSON supplies adsorption metrics, the report also compares
+those supplied values against the descriptor-predicted values. Large gaps are
+flagged as review warnings because they may indicate an out-of-domain material,
+different simulation assumptions, an extraction/provenance issue, or a real
+candidate that deserves deeper investigation.
+
 This is still a baseline estimate, not a replacement for GCMC simulation,
 experimental measurement, or process modeling. Its job is to decide whether an
 unfamiliar candidate is worth deeper computational or lab work.

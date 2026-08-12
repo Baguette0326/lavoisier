@@ -42,6 +42,8 @@ PREDICTION_TARGETS = (
 
 MINIMUM_TARGET_RECORDS = 5
 HOLDOUT_TARGET_RECORDS = 20
+MODERATE_RELATIVE_GAP = 0.15
+LARGE_RELATIVE_GAP = 0.35
 
 
 @dataclass(frozen=True)
@@ -94,6 +96,57 @@ def _build_regressor() -> Pipeline:
     )
 
 
+def _supplied_prediction_comparison(
+    candidate: Mapping[str, object],
+    predictions: Mapping[str, float | None],
+) -> dict[str, dict[str, object]]:
+    comparisons: dict[str, dict[str, object]] = {}
+    for target, predicted_value in predictions.items():
+        supplied_value = pd.to_numeric(pd.Series([candidate.get(target)]), errors="coerce").iloc[0]
+        if pd.isna(supplied_value):
+            comparisons[target] = {
+                "status": "not_supplied",
+                "supplied_value": None,
+                "predicted_value": predicted_value,
+            }
+            continue
+        supplied_float = float(supplied_value)
+        if predicted_value is None:
+            comparisons[target] = {
+                "status": "not_predicted",
+                "supplied_value": round(supplied_float, 4),
+                "predicted_value": None,
+            }
+            continue
+        delta = supplied_float - predicted_value
+        denominator = max(abs(predicted_value), 1e-9)
+        relative_gap = abs(delta) / denominator
+        if relative_gap > LARGE_RELATIVE_GAP:
+            status = "large_supplied_prediction_gap"
+        elif relative_gap > MODERATE_RELATIVE_GAP:
+            status = "moderate_supplied_prediction_gap"
+        else:
+            status = "consistent_with_descriptor_prediction"
+        comparisons[target] = {
+            "status": status,
+            "supplied_value": round(supplied_float, 4),
+            "predicted_value": predicted_value,
+            "delta_supplied_minus_predicted": round(float(delta), 4),
+            "relative_gap": round(float(relative_gap), 4),
+        }
+    return comparisons
+
+
+def _gap_warnings(comparisons: Mapping[str, Mapping[str, object]]) -> list[str]:
+    warnings: list[str] = []
+    for target, comparison in comparisons.items():
+        if comparison.get("status") == "large_supplied_prediction_gap":
+            warnings.append(
+                f"{target} supplied value differs strongly from descriptor-based prediction; review provenance or assumptions"
+            )
+    return warnings
+
+
 def predict_candidate_properties(
     reference_frame: pd.DataFrame,
     candidate: Mapping[str, object],
@@ -110,6 +163,10 @@ def predict_candidate_properties(
     if supplied_descriptor_count == 0:
         warnings.append("candidate has no supported structural descriptors; property predictions were skipped")
     if not feature_columns:
+        supplied_prediction_comparison = _supplied_prediction_comparison(
+            candidate,
+            {target: None for target in targets},
+        )
         return PropertyPredictionResult(
             predicted_properties={target: None for target in targets},
             prediction_summary={
@@ -119,6 +176,7 @@ def predict_candidate_properties(
                 "candidate_descriptor_count": supplied_descriptor_count,
                 "candidate_descriptor_required_count": len(STRUCTURAL_DESCRIPTOR_FEATURES),
                 "target_summaries": {},
+                "supplied_prediction_comparison": supplied_prediction_comparison,
                 "warnings": warnings,
                 "official_use_policy": "Descriptor predictions are baseline estimates, not simulation or laboratory validation.",
             },
@@ -126,6 +184,10 @@ def predict_candidate_properties(
 
     candidate_features = _candidate_frame(candidate, feature_columns)
     if candidate_features.loc[:, descriptor_columns].notna().sum(axis=1).iloc[0] == 0:
+        supplied_prediction_comparison = _supplied_prediction_comparison(
+            candidate,
+            {target: None for target in targets},
+        )
         return PropertyPredictionResult(
             predicted_properties={target: None for target in targets},
             prediction_summary={
@@ -135,6 +197,7 @@ def predict_candidate_properties(
                 "candidate_descriptor_count": supplied_descriptor_count,
                 "candidate_descriptor_required_count": len(STRUCTURAL_DESCRIPTOR_FEATURES),
                 "target_summaries": {},
+                "supplied_prediction_comparison": supplied_prediction_comparison,
                 "warnings": warnings,
                 "official_use_policy": "Descriptor predictions are baseline estimates, not simulation or laboratory validation.",
             },
@@ -200,6 +263,9 @@ def predict_candidate_properties(
             **holdout_summary,
         }
 
+    supplied_prediction_comparison = _supplied_prediction_comparison(candidate, predictions)
+    warnings.extend(_gap_warnings(supplied_prediction_comparison))
+
     return PropertyPredictionResult(
         predicted_properties=predictions,
         prediction_summary={
@@ -212,6 +278,7 @@ def predict_candidate_properties(
             "candidate_descriptor_count": supplied_descriptor_count,
             "candidate_descriptor_required_count": len(STRUCTURAL_DESCRIPTOR_FEATURES),
             "target_summaries": target_summaries,
+            "supplied_prediction_comparison": supplied_prediction_comparison,
             "warnings": warnings,
             "official_use_policy": "Descriptor predictions are baseline estimates, not simulation or laboratory validation.",
         },

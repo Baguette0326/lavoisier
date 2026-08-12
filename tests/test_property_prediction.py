@@ -69,6 +69,19 @@ def test_predict_candidate_properties_uses_descriptors_not_target_metrics() -> N
     assert "heat_of_adsorption_kj_mol" not in feature_columns
     assert result.prediction_summary["candidate_descriptor_count"] == 6
     assert result.prediction_summary["target_summaries"]["co2_uptake_mmol_g"]["test_records"] > 0
+    comparison = result.prediction_summary["supplied_prediction_comparison"]
+    assert comparison["co2_uptake_mmol_g"]["status"] == "not_supplied"
+
+
+def test_predict_candidate_properties_flags_large_supplied_prediction_gap() -> None:
+    candidate = _candidate()
+    candidate["co2_uptake_mmol_g"] = 20.0
+
+    result = predict_candidate_properties(_reference_frame(), candidate)
+
+    comparison = result.prediction_summary["supplied_prediction_comparison"]
+    assert comparison["co2_uptake_mmol_g"]["status"] == "large_supplied_prediction_gap"
+    assert any("co2_uptake_mmol_g supplied value differs strongly" in warning for warning in result.prediction_summary["warnings"])
 
 
 def test_predict_candidate_properties_skips_candidate_without_descriptors() -> None:
@@ -113,4 +126,6 @@ def test_property_prediction_script_writes_prediction_packet(tmp_path: Path) -> 
     assert set(predictions) == set(PREDICTION_TARGETS)
     assert summary["method"] == "RandomForestRegressor descriptor baseline"
     assert "target adsorption metrics excluded" in summary["feature_policy"]
+    assert "supplied_prediction_comparison" in summary
     assert "# Candidate Property Prediction Report" in report
+    assert "## Supplied Vs Descriptor-Predicted Metrics" in report

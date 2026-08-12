@@ -116,6 +116,27 @@ def _format_property_prediction_table(
     return lines
 
 
+def _format_supplied_prediction_comparison_table(comparisons: dict[str, object]) -> list[str]:
+    lines = [
+        "| Target | Supplied value | Descriptor-predicted value | Delta | Status |",
+        "| --- | ---: | ---: | ---: | --- |",
+    ]
+    if not comparisons:
+        return lines + ["| No supplied/predicted comparison available |  |  |  |  |"]
+    for target, raw_detail in comparisons.items():
+        detail = raw_detail if isinstance(raw_detail, dict) else {}
+        lines.append(
+            "| {target} | {supplied} | {predicted} | {delta} | {status} |".format(
+                target=target,
+                supplied=detail.get("supplied_value", ""),
+                predicted=detail.get("predicted_value", ""),
+                delta=detail.get("delta_supplied_minus_predicted", ""),
+                status=detail.get("status", ""),
+            )
+        )
+    return lines
+
+
 def _format_dataframe_table(frame: pd.DataFrame, columns: list[str], limit: int = 10) -> list[str]:
     if frame.empty or not columns:
         return ["No nearest-neighbor records were available."]
@@ -166,6 +187,12 @@ def build_markdown_report(
                 f"- Feature policy: {property_prediction_summary['feature_policy']}",
                 f"- Candidate supplied descriptors: `{property_prediction_summary['candidate_descriptor_count']}` / `{property_prediction_summary['candidate_descriptor_required_count']}`",
             ]
+        )
+        lines.extend(["", "## Supplied Vs Descriptor-Predicted Metrics", ""])
+        lines.extend(
+            _format_supplied_prediction_comparison_table(
+                property_prediction_summary.get("supplied_prediction_comparison", {})
+            )
         )
     coverage = summary.get("descriptor_coverage", {})
     lines.extend(
@@ -268,6 +295,12 @@ def main() -> None:
     print("Descriptor-predicted properties:")
     for target, value in property_result.predicted_properties.items():
         print(f"  {target}: {'not predicted' if value is None else value}")
+    comparison = property_result.prediction_summary.get("supplied_prediction_comparison", {})
+    if comparison:
+        print("Supplied vs descriptor-predicted status:")
+        for target, detail in comparison.items():
+            status = detail.get("status") if isinstance(detail, dict) else ""
+            print(f"  {target}: {status}")
     coverage = result.prediction_summary["descriptor_coverage"]
     print(
         "Descriptor coverage: "
