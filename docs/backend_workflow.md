@@ -191,6 +191,24 @@ Does this unfamiliar candidate resemble known records that are worth deeper
 review, or does it resemble records that were weak, risky, or incomplete?
 ```
 
+Run the candidate script with a ranked reference table and one candidate JSON
+file:
+
+```bash
+python scripts/evaluate_unfamiliar_candidate.py \
+  --reference reports/crafted_real_slice_export/ranked_records.csv \
+  --candidate data/sample_unfamiliar_candidate.json \
+  --output-dir reports/unfamiliar_candidate_triage \
+  --k 5
+```
+
+Ignored local outputs:
+
+```text
+reports/unfamiliar_candidate_triage/nearest_neighbors.csv
+reports/unfamiliar_candidate_triage/candidate_similarity_summary.json
+```
+
 ## Next Backend Milestones
 
 1. Complete `docs/crafted_approval_checklist.md` before downloading or parsing
