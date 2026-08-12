@@ -237,6 +237,8 @@ Ignored local outputs:
 ```text
 reports/unfamiliar_candidate_triage/nearest_neighbors.csv
 reports/unfamiliar_candidate_triage/candidate_similarity_summary.json
+reports/unfamiliar_candidate_triage/predicted_properties.json
+reports/unfamiliar_candidate_triage/property_prediction_summary.json
 reports/unfamiliar_candidate_triage/candidate_review_report.md
 ```
 
@@ -262,8 +264,8 @@ that would make the candidate decision less uncertain.
 
 `candidate_review_report.md` is the human-readable export. It summarizes the
 candidate verdict, metric benchmarks, nearest-neighbor comparison, nearest
-known records, next experiment steps, and limitations for review without
-opening the raw JSON.
+known records, descriptor-predicted properties, next experiment steps, and
+limitations for review without opening the raw JSON.
 
 ## Descriptor-Based Property Prediction
 
@@ -316,6 +318,10 @@ reports/unfamiliar_candidate_property_prediction/predicted_properties.json
 reports/unfamiliar_candidate_property_prediction/property_prediction_summary.json
 reports/unfamiliar_candidate_property_prediction/property_prediction_report.md
 ```
+
+The standalone command is useful when testing the prediction model by itself.
+For normal candidate review, `scripts/evaluate_unfamiliar_candidate.py` already
+includes these descriptor-predicted properties in the unified review packet.
 
 This is still a baseline estimate, not a replacement for GCMC simulation,
 experimental measurement, or process modeling. Its job is to decide whether an

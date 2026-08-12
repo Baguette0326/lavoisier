@@ -13,6 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from carbonsense.ml_triage import triage_unfamiliar_candidate
+from carbonsense.property_prediction import predict_candidate_properties
 
 
 DEFAULT_REFERENCE = PROJECT_ROOT / "reports" / "crafted_real_slice_export" / "ranked_records.csv"
@@ -90,6 +91,31 @@ def _format_neighbor_comparison_table(comparisons: dict[str, object]) -> list[st
     return lines
 
 
+def _format_property_prediction_table(
+    predicted_properties: dict[str, float | None],
+    prediction_summary: dict[str, object],
+) -> list[str]:
+    lines = [
+        "| Target | Descriptor-predicted value | Training records | Test MAE | Test R2 |",
+        "| --- | ---: | ---: | ---: | ---: |",
+    ]
+    if not predicted_properties:
+        return lines + ["| No property predictions available |  |  |  |  |"]
+    target_summaries = prediction_summary.get("target_summaries", {})
+    for target, value in predicted_properties.items():
+        detail = target_summaries.get(target, {}) if isinstance(target_summaries, dict) else {}
+        lines.append(
+            "| {target} | {value} | {training_records} | {test_mae} | {test_r2} |".format(
+                target=target,
+                value="not predicted" if value is None else value,
+                training_records=detail.get("training_records", 0),
+                test_mae=detail.get("test_mae", ""),
+                test_r2=detail.get("test_r2", ""),
+            )
+        )
+    return lines
+
+
 def _format_dataframe_table(frame: pd.DataFrame, columns: list[str], limit: int = 10) -> list[str]:
     if frame.empty or not columns:
         return ["No nearest-neighbor records were available."]
@@ -107,6 +133,8 @@ def build_markdown_report(
     candidate: dict[str, object],
     summary: dict[str, object],
     neighbors: pd.DataFrame,
+    predicted_properties: dict[str, float | None] | None = None,
+    property_prediction_summary: dict[str, object] | None = None,
 ) -> str:
     candidate_id = candidate.get("material_id", "unidentified candidate")
     lines = [
@@ -128,6 +156,17 @@ def build_markdown_report(
         "",
     ]
     lines.extend(_format_metric_table(summary.get("metric_benchmarks", {})))
+    if predicted_properties is not None and property_prediction_summary is not None:
+        lines.extend(["", "## Descriptor-Predicted Properties", ""])
+        lines.extend(_format_property_prediction_table(predicted_properties, property_prediction_summary))
+        lines.extend(
+            [
+                "",
+                f"- Prediction method: `{property_prediction_summary['method']}`",
+                f"- Feature policy: {property_prediction_summary['feature_policy']}",
+                f"- Candidate supplied descriptors: `{property_prediction_summary['candidate_descriptor_count']}` / `{property_prediction_summary['candidate_descriptor_required_count']}`",
+            ]
+        )
     coverage = summary.get("descriptor_coverage", {})
     lines.extend(
         [
@@ -177,6 +216,10 @@ def build_markdown_report(
             lines.append(f"- {warning}")
     else:
         lines.append("- No candidate-specific warnings were generated.")
+    if property_prediction_summary is not None:
+        for warning in property_prediction_summary.get("warnings", []):
+            lines.append(f"- Property prediction: {warning}")
+        lines.append(f"- {property_prediction_summary['official_use_policy']}")
     lines.append(f"- {summary['official_use_policy']}")
     lines.append("- This report is a computational review aid, not proof of experimental viability.")
     return "\n".join(lines) + "\n"
@@ -192,15 +235,26 @@ def main() -> None:
     reference_frame = pd.read_csv(reference_path)
     candidate = load_candidate(candidate_path)
     result = triage_unfamiliar_candidate(reference_frame, candidate, k=args.k)
+    property_result = predict_candidate_properties(reference_frame, candidate)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     neighbors_path = args.output_dir / "nearest_neighbors.csv"
     summary_path = args.output_dir / "candidate_similarity_summary.json"
+    predicted_properties_path = args.output_dir / "predicted_properties.json"
+    property_summary_path = args.output_dir / "property_prediction_summary.json"
     report_path = args.output_dir / "candidate_review_report.md"
     result.neighbor_records.to_csv(neighbors_path, index=False)
     summary_path.write_text(json.dumps(result.prediction_summary, indent=2), encoding="utf-8")
+    predicted_properties_path.write_text(json.dumps(property_result.predicted_properties, indent=2), encoding="utf-8")
+    property_summary_path.write_text(json.dumps(property_result.prediction_summary, indent=2), encoding="utf-8")
     report_path.write_text(
-        build_markdown_report(candidate, result.prediction_summary, result.neighbor_records),
+        build_markdown_report(
+            candidate,
+            result.prediction_summary,
+            result.neighbor_records,
+            property_result.predicted_properties,
+            property_result.prediction_summary,
+        ),
         encoding="utf-8",
     )
 
@@ -211,6 +265,9 @@ def main() -> None:
     print(f"Recommendation reason: {result.prediction_summary['rd_recommendation_reason']}")
     print(f"Benchmark verdict: {result.prediction_summary['benchmark_verdict']}")
     print(f"Neighbor advantage: {result.prediction_summary['neighbor_advantage_verdict']}")
+    print("Descriptor-predicted properties:")
+    for target, value in property_result.predicted_properties.items():
+        print(f"  {target}: {'not predicted' if value is None else value}")
     coverage = result.prediction_summary["descriptor_coverage"]
     print(
         "Descriptor coverage: "
@@ -224,8 +281,12 @@ def main() -> None:
         print(f"  - [{step['priority']}] {step['action']}: {step['reason']}")
     for warning in result.prediction_summary["warnings"]:
         print(f"Warning: {warning}")
+    for warning in property_result.prediction_summary.get("warnings", []):
+        print(f"Property prediction warning: {warning}")
     print(f"Wrote {display_path(neighbors_path)}")
     print(f"Wrote {display_path(summary_path)}")
+    print(f"Wrote {display_path(predicted_properties_path)}")
+    print(f"Wrote {display_path(property_summary_path)}")
     print(f"Wrote {display_path(report_path)}")
 
 
