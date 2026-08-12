@@ -14,7 +14,13 @@ import sys
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from carbonsense.crafted_adapter import CraftedRealSliceConfig, CraftedSliceConfig, parse_crafted_real_slice
+from carbonsense.crafted_adapter import (
+    CraftedRealSliceConfig,
+    CraftedSliceConfig,
+    join_crafted_geometric_descriptors,
+    load_crafted_mof_geometric_descriptors,
+    parse_crafted_real_slice,
+)
 from carbonsense.pipeline import export_result, run_crafted_screening_pipeline
 
 
@@ -22,12 +28,14 @@ DEFAULT_ROOT = PROJECT_ROOT / "data" / "raw" / "crafted_2_0_1" / "CRAFTED-2.0.1"
 DEFAULT_ARCHIVE = PROJECT_ROOT / "data" / "raw" / "crafted_2_0_1" / "CRAFTED-2.0.1.tar.xz"
 DEFAULT_PROCESSED_DIR = PROJECT_ROOT / "data" / "processed" / "crafted_2_0_1"
 DEFAULT_REPORT_DIR = PROJECT_ROOT / "reports" / "crafted_real_slice_export"
+DEFAULT_DESCRIPTOR_FILE = DEFAULT_ROOT / "RAC_DBSCAN" / "CRAFTED_MOF_geometric.csv"
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Parse and rank the first local CRAFTED 2.0.1 slice.")
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="Extracted CRAFTED 2.0.1 folder.")
     parser.add_argument("--archive", type=Path, default=DEFAULT_ARCHIVE, help="Downloaded CRAFTED archive path.")
+    parser.add_argument("--descriptor-file", type=Path, default=DEFAULT_DESCRIPTOR_FILE)
     parser.add_argument("--processed-dir", type=Path, default=DEFAULT_PROCESSED_DIR)
     parser.add_argument("--report-dir", type=Path, default=DEFAULT_REPORT_DIR)
     parser.add_argument("--limit", type=int, default=None, help="Optional material limit for smoke testing.")
@@ -45,6 +53,12 @@ def main() -> None:
 
     real_config = CraftedRealSliceConfig()
     long_table, screening, parser_blocked = parse_crafted_real_slice(root, real_config, limit=args.limit)
+    descriptor_file = args.descriptor_file.resolve()
+    descriptor_match_count = 0
+    if descriptor_file.exists() and not screening.empty:
+        descriptors = load_crafted_mof_geometric_descriptors(descriptor_file)
+        screening = join_crafted_geometric_descriptors(screening, descriptors)
+        descriptor_match_count = int(screening["descriptor_match_status"].eq("matched_crafted_mof_geometric").sum())
 
     args.processed_dir.mkdir(parents=True, exist_ok=True)
     long_path = args.processed_dir / "crafted_isotherm_long.csv"
@@ -72,6 +86,7 @@ def main() -> None:
 
     print(f"Long records: {len(long_table)}")
     print(f"Screening records: {len(screening)}")
+    print(f"Descriptor-matched screening records: {descriptor_match_count}")
     print(f"Parser-blocked records: {len(parser_blocked)}")
     print(f"Ranked records: {len(result.ranked_records)}")
     print(f"Backend-blocked records: {result.metadata.blocked_count}")

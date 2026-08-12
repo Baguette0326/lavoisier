@@ -34,6 +34,23 @@ The extracted archive contains:
 - `INPUT_FILES/`
 - `RAC_DBSCAN/`
 
+`RAC_DBSCAN/` includes the descriptor files needed for the next structure-aware
+ML step:
+
+- `CRAFTED_MOF_geometric.csv`: 690 CRAFTED MOF geometric descriptor rows
+- `CRAFTED_MOF_full_featurization_frame.csv`: 690 CRAFTED MOF RAC descriptor rows
+
+The first integration uses the geometric table only. Standardized fields are:
+
+- `surface_area_m2_g`
+- `pore_volume_cm3_g`
+- `density_g_cm3`
+- `pore_limiting_diameter_a`
+- `largest_cavity_diameter_a`
+- `void_fraction`
+
+RAC descriptors are kept as a later high-dimensional feature target.
+
 The optimized local inspection parsed:
 
 - 97,704 isotherm files
@@ -93,6 +110,7 @@ Run result:
 
 - long records: 2,714
 - screening records: 1,352
+- descriptor-matched screening records: 686
 - parser-blocked records: 5
 - ranked records: 1,352
 - backend-blocked records: 0
@@ -142,3 +160,21 @@ The ML evaluation was then tightened to reduce leakage:
 The remaining high accuracy is expected because labels are weak-supervision
 targets created by rules. It should be presented as internal consistency of the
 triage model, not as proof that candidates will succeed experimentally.
+
+After geometric descriptor integration, the ML feature set includes adsorption
+metrics plus CRAFTED geometric descriptors where available:
+
+- `surface_area_m2_g`
+- `pore_volume_cm3_g`
+- `density_g_cm3`
+- `pore_limiting_diameter_a`
+- `largest_cavity_diameter_a`
+- `void_fraction`
+
+The descriptor-enriched local ML run kept the same train/validation/test split
+size of 810 / 271 / 271 and produced:
+
+- validation accuracy against rule-derived labels: 0.9926
+- test accuracy against rule-derived labels: 0.9852
+
+This is still weak-supervision performance, not experimental validation.

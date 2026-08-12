@@ -25,6 +25,12 @@ NUMERIC_FEATURES = [
     "n2_uptake_mmol_g",
     "co2_n2_selectivity",
     "heat_of_adsorption_kj_mol",
+    "surface_area_m2_g",
+    "pore_volume_cm3_g",
+    "density_g_cm3",
+    "pore_limiting_diameter_a",
+    "largest_cavity_diameter_a",
+    "void_fraction",
     "temperature_k",
     "co2_pressure_bar",
     "n2_pressure_bar",
@@ -219,9 +225,14 @@ def _rd_recommendation(
     warnings: list[str],
 ) -> tuple[str, str]:
     if warnings:
+        if any("missing supported descriptor" in warning.casefold() for warning in warnings):
+            return (
+                "review_with_caution",
+                "candidate has missing descriptors, so similarity and benchmark evidence are incomplete",
+            )
         return (
             "review_with_caution",
-            "candidate has missing descriptors or is outside the familiar reference space",
+            "candidate is outside the familiar reference space, so neighbor evidence is weak",
         )
     if nearest_distance > 3:
         return (
@@ -311,11 +322,20 @@ def _next_experiment_steps(
 ) -> list[dict[str, str]]:
     steps: list[dict[str, str]] = []
     if warnings:
+        if any("missing supported descriptor" in warning.casefold() for warning in warnings):
+            steps.append(
+                {
+                    "priority": "high",
+                    "action": "complete_candidate_descriptor_set",
+                    "reason": "similarity and benchmark verdicts are less reliable while required descriptors are missing",
+                }
+            )
+            return steps
         steps.append(
             {
                 "priority": "high",
-                "action": "complete_candidate_descriptor_set",
-                "reason": "similarity and benchmark verdicts are less reliable while required descriptors are missing",
+                "action": "review_out_of_domain_similarity",
+                "reason": "nearest known MOFs are far away in feature space, so compare assumptions and descriptor scaling before trusting the verdict",
             }
         )
         return steps

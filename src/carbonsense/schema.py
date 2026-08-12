@@ -25,6 +25,9 @@ RECOMMENDED_COLUMNS = [
     "surface_area_m2_g",
     "pore_volume_cm3_g",
     "density_g_cm3",
+    "pore_limiting_diameter_a",
+    "largest_cavity_diameter_a",
+    "void_fraction",
     "humidity_flag",
 ]
 
@@ -38,6 +41,9 @@ NUMERIC_COLUMNS = [
     "surface_area_m2_g",
     "pore_volume_cm3_g",
     "density_g_cm3",
+    "pore_limiting_diameter_a",
+    "largest_cavity_diameter_a",
+    "void_fraction",
 ]
 
 

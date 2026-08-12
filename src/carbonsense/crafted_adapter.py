@@ -25,6 +25,19 @@ CRAFTED_REQUIRED_COLUMNS = {
     "n2_uptake_mmol_g",
 }
 
+CRAFTED_GEOMETRIC_DESCRIPTOR_COLUMNS = {
+    "FrameworkName": "material_id",
+    "D_is": "largest_cavity_diameter_a",
+    "D_fs": "pore_limiting_diameter_a",
+    "D_isfs": "largest_included_free_sphere_diameter_a",
+    "ASA_m^2/g": "surface_area_m2_g",
+    "ASA_m^2/cm^3": "volumetric_surface_area_m2_cm3",
+    "Density": "density_g_cm3",
+    "AV_Volume_fraction": "void_fraction",
+    "AV_cm^3/g": "pore_volume_cm3_g",
+    "n_pockets": "pocket_count",
+}
+
 
 @dataclass(frozen=True)
 class CraftedSliceConfig:
@@ -268,6 +281,41 @@ def parse_crafted_real_slice(
     long_table = parse_crafted_isotherm_long(root, config, limit=limit)
     screening, blocked = build_crafted_screening_slice(long_table, root, config)
     return long_table, screening, blocked
+
+
+def load_crafted_mof_geometric_descriptors(path: Path) -> pd.DataFrame:
+    """Load CRAFTED-provided MOF geometric descriptors with Lavoisier names."""
+    raw = pd.read_csv(path)
+    missing = sorted(set(CRAFTED_GEOMETRIC_DESCRIPTOR_COLUMNS) - set(raw.columns))
+    if missing:
+        raise ValueError(f"Missing CRAFTED geometric descriptor column(s): {', '.join(missing)}")
+
+    result = raw[list(CRAFTED_GEOMETRIC_DESCRIPTOR_COLUMNS)].rename(columns=CRAFTED_GEOMETRIC_DESCRIPTOR_COLUMNS)
+    result["material_id"] = result["material_id"].astype(str)
+    numeric_columns = [column for column in result.columns if column != "material_id"]
+    for column in numeric_columns:
+        result[column] = pd.to_numeric(result[column], errors="coerce")
+    result["descriptor_source"] = "CRAFTED 2.0.1 RAC_DBSCAN/CRAFTED_MOF_geometric.csv"
+    result["descriptor_type"] = "geometric_zeopp"
+    return result
+
+
+def join_crafted_geometric_descriptors(screening: pd.DataFrame, descriptors: pd.DataFrame) -> pd.DataFrame:
+    """Attach CRAFTED geometric descriptors while preserving unmatched rows."""
+    if screening.empty:
+        return screening.copy()
+    if "material_id" not in screening.columns:
+        raise ValueError("Screening table must include material_id before descriptor join.")
+    if "material_id" not in descriptors.columns:
+        raise ValueError("Descriptor table must include material_id before descriptor join.")
+
+    descriptor_columns = [column for column in descriptors.columns if column != "material_id"]
+    deduped = descriptors.drop_duplicates(subset=["material_id"], keep="first")
+    joined = screening.merge(deduped, on="material_id", how="left", validate="many_to_one")
+    joined["descriptor_match_status"] = joined[descriptor_columns].notna().any(axis=1).map(
+        {True: "matched_crafted_mof_geometric", False: "missing_crafted_mof_geometric"}
+    )
+    return joined
 
 
 def validate_crafted_like_table(frame: pd.DataFrame) -> list[str]:

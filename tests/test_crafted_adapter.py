@@ -4,6 +4,8 @@ from pathlib import Path
 from carbonsense.crafted_adapter import (
     CraftedRealSliceConfig,
     CraftedSliceConfig,
+    join_crafted_geometric_descriptors,
+    load_crafted_mof_geometric_descriptors,
     parse_crafted_real_slice,
     select_controlled_crafted_slice,
     validate_crafted_like_table,
@@ -133,3 +135,22 @@ def test_parse_crafted_real_slice_blocks_zero_n2_selectivity_denominator(tmp_pat
     assert screening.empty
     assert blocked.loc[0, "block_type"] == "invalid_selectivity_denominator"
     assert "positive matched CO2 and N2 uptake" in blocked.loc[0, "block_reason"]
+
+
+def test_load_and_join_crafted_geometric_descriptors(tmp_path: Path) -> None:
+    descriptor_path = tmp_path / "CRAFTED_MOF_geometric.csv"
+    descriptor_path.write_text(
+        "FrameworkName,D_is,D_fs,D_isfs,ASA_m^2/cm^3,ASA_m^2/g,Density,AV_Volume_fraction,AV_cm^3/g,n_pockets\n"
+        "MOF-1,6.0,4.0,5.5,1000,1200,0.9,0.25,0.7,2\n",
+        encoding="utf-8",
+    )
+    screening = pd.DataFrame({"material_id": ["MOF-1", "MOF-2"], "co2_uptake_mmol_g": [2.0, 3.0]})
+
+    descriptors = load_crafted_mof_geometric_descriptors(descriptor_path)
+    joined = join_crafted_geometric_descriptors(screening, descriptors)
+
+    assert descriptors.loc[0, "pore_limiting_diameter_a"] == 4.0
+    assert descriptors.loc[0, "largest_cavity_diameter_a"] == 6.0
+    assert descriptors.loc[0, "surface_area_m2_g"] == 1200
+    assert joined.loc[0, "descriptor_match_status"] == "matched_crafted_mof_geometric"
+    assert joined.loc[1, "descriptor_match_status"] == "missing_crafted_mof_geometric"

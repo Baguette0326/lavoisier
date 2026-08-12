@@ -142,6 +142,19 @@ reports/crafted_real_slice_export/
 Do not commit those real processed outputs until public-sharing rights are
 reviewed separately.
 
+The real slice command also loads CRAFTED-provided MOF geometric descriptors
+from:
+
+```text
+RAC_DBSCAN/CRAFTED_MOF_geometric.csv
+```
+
+These descriptors are joined by `material_id`/`FrameworkName` when available.
+The standardized descriptor fields include surface area, pore volume, density,
+pore-limiting diameter, largest cavity diameter, and void fraction. Unmatched
+rows are retained with `descriptor_match_status =
+missing_crafted_mof_geometric`, so descriptor coverage is visible.
+
 ## ML Triage Command
 
 After the measured/rule-based slice has been exported locally, run candidate
@@ -153,8 +166,11 @@ python scripts/run_ml_triage.py
 
 The ML triage layer uses weak supervision: transparent engineering rules create
 candidate review labels, then a `RandomForestClassifier` learns those labels
-from tabular screening features. This is a review aid only. It does not replace
-comparability checks, measured ranking, or human review.
+from tabular screening features. When the CRAFTED descriptor join has been run,
+the feature set includes structural descriptors such as surface area, pore
+volume, density, pore-limiting diameter, largest cavity diameter, and void
+fraction. This is a review aid only. It does not replace comparability checks,
+measured ranking, or human review.
 
 Ignored local outputs:
 
