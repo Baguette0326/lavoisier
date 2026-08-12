@@ -37,6 +37,12 @@ CATEGORICAL_FEATURES = [
     "simulation_method",
 ]
 
+BENCHMARK_METRICS = (
+    "co2_uptake_mmol_g",
+    "co2_n2_selectivity",
+    "heat_of_adsorption_kj_mol",
+)
+
 TRIAGE_CLASS_ORDER = (
     "manual_review_required",
     "needs_more_data",
@@ -243,6 +249,60 @@ def _rd_recommendation(
     )
 
 
+def _percentile_rank(reference_values: pd.Series, candidate_value: float) -> float:
+    numeric = pd.to_numeric(reference_values, errors="coerce").dropna()
+    if numeric.empty:
+        return 0.0
+    return float((numeric <= candidate_value).mean())
+
+
+def _metric_benchmarks(reference: pd.DataFrame, candidate_frame: pd.DataFrame) -> tuple[dict[str, object], str]:
+    candidate_row = candidate_frame.iloc[0]
+    benchmarks: dict[str, object] = {}
+    available_percentiles: dict[str, float] = {}
+    for metric in BENCHMARK_METRICS:
+        if metric not in reference.columns or metric not in candidate_frame.columns:
+            continue
+        candidate_value = _numeric(candidate_row.get(metric))
+        reference_values = pd.to_numeric(reference[metric], errors="coerce").dropna()
+        if candidate_value is None or reference_values.empty:
+            continue
+
+        percentile = _percentile_rank(reference_values, candidate_value)
+        detail: dict[str, object] = {
+            "candidate_value": round(candidate_value, 4),
+            "reference_count": int(len(reference_values)),
+            "reference_median": round(float(reference_values.median()), 4),
+            "percentile_rank": round(percentile, 4),
+        }
+        if metric == "heat_of_adsorption_kj_mol":
+            if 25 <= candidate_value <= 60:
+                detail["target_status"] = "inside_first_pass_target_range"
+            elif candidate_value > 60:
+                detail["target_status"] = "above_first_pass_target_range"
+            else:
+                detail["target_status"] = "below_first_pass_target_range"
+        benchmarks[metric] = detail
+        available_percentiles[metric] = percentile
+
+    uptake = available_percentiles.get("co2_uptake_mmol_g")
+    selectivity = available_percentiles.get("co2_n2_selectivity")
+    heat_detail = benchmarks.get("heat_of_adsorption_kj_mol", {})
+    heat_target_status = heat_detail.get("target_status") if isinstance(heat_detail, dict) else None
+
+    if uptake is None or selectivity is None or heat_target_status is None:
+        verdict = "insufficient_metric_benchmark"
+    elif uptake >= 0.75 and selectivity >= 0.75 and heat_target_status == "inside_first_pass_target_range":
+        verdict = "above_reference_candidate"
+    elif heat_target_status == "above_first_pass_target_range" or uptake < 0.25 or selectivity < 0.25:
+        verdict = "below_reference_or_risky"
+    elif uptake >= 0.5 and selectivity >= 0.5 and heat_target_status == "inside_first_pass_target_range":
+        verdict = "competitive_with_reference"
+    else:
+        verdict = "mixed_against_reference"
+    return benchmarks, verdict
+
+
 def triage_unfamiliar_candidate(
     reference_frame: pd.DataFrame,
     candidate: pd.Series | dict[str, object],
@@ -269,6 +329,7 @@ def triage_unfamiliar_candidate(
         raise ValueError("At least one labelled reference record is required.")
 
     candidate_frame = pd.DataFrame([candidate])
+    metric_benchmarks, benchmark_verdict = _metric_benchmarks(reference, candidate_frame)
     preprocessor = _build_similarity_preprocessor(numeric_features, categorical_features)
     reference_matrix = preprocessor.fit_transform(_frame_with_feature_columns(reference, feature_columns))
     candidate_matrix = preprocessor.transform(_frame_with_feature_columns(candidate_frame, feature_columns))
@@ -317,6 +378,8 @@ def triage_unfamiliar_candidate(
         "predicted_candidate_class": predicted_class,
         "prediction_confidence": round(float(confidence), 4),
         "nearest_distance": round(float(neighbor_distances[0]), 4),
+        "benchmark_verdict": benchmark_verdict,
+        "metric_benchmarks": metric_benchmarks,
         "rd_recommendation": recommendation,
         "rd_recommendation_reason": recommendation_reason,
         "class_weight_vote": {key: round(value, 4) for key, value in sorted(class_weights.items())},

@@ -74,9 +74,12 @@ def test_evaluate_unfamiliar_candidate_script_writes_review_packet(tmp_path: Pat
 
     assert "Predicted review class: promising_candidate" in completed.stdout
     assert "R&D recommendation: prioritize_deeper_review" in completed.stdout
+    assert "Benchmark verdict: competitive_with_reference" in completed.stdout
     summary = json.loads((output_dir / "candidate_similarity_summary.json").read_text(encoding="utf-8"))
     neighbors = pd.read_csv(output_dir / "nearest_neighbors.csv")
     assert summary["predicted_candidate_class"] == "promising_candidate"
     assert summary["rd_recommendation"] == "prioritize_deeper_review"
+    assert summary["benchmark_verdict"] == "competitive_with_reference"
+    assert "metric_benchmarks" in summary
     assert summary["k_used"] == 2
     assert neighbors["material_id"].tolist() == ["strong-a", "strong-b"]

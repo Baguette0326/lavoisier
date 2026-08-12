@@ -70,6 +70,7 @@ def main() -> None:
     print(f"Predicted review class: {result.prediction_summary['predicted_candidate_class']}")
     print(f"R&D recommendation: {result.prediction_summary['rd_recommendation']}")
     print(f"Recommendation reason: {result.prediction_summary['rd_recommendation_reason']}")
+    print(f"Benchmark verdict: {result.prediction_summary['benchmark_verdict']}")
     print(f"Confidence: {result.prediction_summary['prediction_confidence']}")
     print(f"Nearest distance: {result.prediction_summary['nearest_distance']}")
     for warning in result.prediction_summary["warnings"]:

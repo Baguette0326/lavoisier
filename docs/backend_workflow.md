@@ -183,6 +183,9 @@ It returns:
 - a cautious R&D recommendation, such as `prioritize_deeper_review`,
   `consider_for_deeper_review`, `review_with_caution`, or
   `deprioritize_until_new_evidence`;
+- a benchmark verdict comparing the candidate's core metrics against known
+  records, such as `above_reference_candidate`, `competitive_with_reference`,
+  `mixed_against_reference`, or `below_reference_or_risky`;
 - warnings when the candidate is missing descriptors or appears far from the
   known reference space.
 
@@ -211,6 +214,12 @@ Ignored local outputs:
 reports/unfamiliar_candidate_triage/nearest_neighbors.csv
 reports/unfamiliar_candidate_triage/candidate_similarity_summary.json
 ```
+
+The summary includes metric percentiles for CO2 uptake and CO2/N2 selectivity,
+plus a first-pass heat-of-adsorption target-range check. These benchmarks are
+separate from nearest-neighbor similarity: they help answer whether the
+candidate is merely similar to known materials or actually competitive against
+the reference distribution.
 
 ## Next Backend Milestones
 
