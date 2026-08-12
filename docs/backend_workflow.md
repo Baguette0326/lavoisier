@@ -265,6 +265,62 @@ candidate verdict, metric benchmarks, nearest-neighbor comparison, nearest
 known records, next experiment steps, and limitations for review without
 opening the raw JSON.
 
+## Descriptor-Based Property Prediction
+
+The next virtual-lab primitive is
+`predict_candidate_properties()` in `src/carbonsense/property_prediction.py`.
+
+This answers a different question from similarity triage:
+
+```text
+Given only structural descriptors and controlled-condition fields, what
+adsorption properties would the reference data suggest for this unfamiliar MOF?
+```
+
+The current baseline uses a `RandomForestRegressor` for each target:
+
+- `co2_uptake_mmol_g`;
+- `co2_n2_selectivity`;
+- `heat_of_adsorption_kj_mol`.
+
+The feature set is deliberately limited to structural descriptors and
+controlled-condition fields:
+
+- surface area;
+- pore volume;
+- density;
+- pore-limiting diameter;
+- largest cavity diameter;
+- void fraction;
+- temperature;
+- CO2 pressure;
+- N2 pressure.
+
+The target adsorption metrics are explicitly excluded from model features. This
+keeps the prediction layer separate from the existing classifier, which is a
+review-label model trained on known screening metrics.
+
+Run the property prediction script with:
+
+```bash
+python scripts/predict_unfamiliar_candidate_properties.py \
+  --reference reports/crafted_real_slice_export/ranked_records.csv \
+  --candidate data/sample_unfamiliar_candidate.json \
+  --output-dir reports/unfamiliar_candidate_property_prediction
+```
+
+Ignored local outputs:
+
+```text
+reports/unfamiliar_candidate_property_prediction/predicted_properties.json
+reports/unfamiliar_candidate_property_prediction/property_prediction_summary.json
+reports/unfamiliar_candidate_property_prediction/property_prediction_report.md
+```
+
+This is still a baseline estimate, not a replacement for GCMC simulation,
+experimental measurement, or process modeling. Its job is to decide whether an
+unfamiliar candidate is worth deeper computational or lab work.
+
 ## Next Backend Milestones
 
 1. Complete `docs/crafted_approval_checklist.md` before downloading or parsing

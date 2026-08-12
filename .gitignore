@@ -20,6 +20,7 @@ reports/crafted_archive_inspection/
 reports/crafted_real_slice_export*/
 reports/crafted_ml_triage*/
 reports/unfamiliar_candidate_triage*/
+reports/unfamiliar_candidate_property_prediction*/
 *.zip
 *.pkl
 *.joblib
