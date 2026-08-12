@@ -338,6 +338,10 @@ flagged as review warnings because they may indicate an out-of-domain material,
 different simulation assumptions, an extraction/provenance issue, or a real
 candidate that deserves deeper investigation.
 
+For each descriptor-predicted target, the summary includes approximate P10/P90
+bounds from the spread of random-forest tree predictions. These bounds are a
+model-spread diagnostic, not a calibrated statistical confidence interval.
+
 This is still a baseline estimate, not a replacement for GCMC simulation,
 experimental measurement, or process modeling. Its job is to decide whether an
 unfamiliar candidate is worth deeper computational or lab work.

@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping, Sequence
 
+import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import SimpleImputer
@@ -94,6 +95,25 @@ def _build_regressor() -> Pipeline:
             ),
         ]
     )
+
+
+def _forest_prediction_interval(model: Pipeline, candidate_features: pd.DataFrame) -> dict[str, float | None]:
+    """Estimate model spread from random-forest tree predictions."""
+    regressor = model.named_steps["regressor"]
+    imputer = model.named_steps["imputer"]
+    transformed_candidate = imputer.transform(candidate_features)
+    tree_predictions = np.array([tree.predict(transformed_candidate)[0] for tree in regressor.estimators_])
+    if len(tree_predictions) == 0:
+        return {
+            "approx_p10": None,
+            "approx_p90": None,
+            "tree_std": None,
+        }
+    return {
+        "approx_p10": round(float(np.percentile(tree_predictions, 10)), 4),
+        "approx_p90": round(float(np.percentile(tree_predictions, 90)), 4),
+        "tree_std": round(float(np.std(tree_predictions)), 4),
+    }
 
 
 def _supplied_prediction_comparison(
@@ -255,11 +275,15 @@ def predict_candidate_properties(
 
         final_model = _build_regressor()
         final_model.fit(x, y)
-        prediction = float(final_model.predict(candidate_features.loc[:, feature_columns])[0])
+        candidate_feature_frame = candidate_features.loc[:, feature_columns]
+        prediction = float(final_model.predict(candidate_feature_frame)[0])
+        interval = _forest_prediction_interval(final_model, candidate_feature_frame)
         predictions[target] = round(prediction, 4)
         target_summaries[target] = {
             "status": "predicted",
             "training_records": training_records,
+            "prediction_interval_method": "random_forest_tree_prediction_p10_p90",
+            **interval,
             **holdout_summary,
         }
 

@@ -81,16 +81,18 @@ def build_markdown_report(
         "",
         "## Predicted Properties",
         "",
-        "| Target | Predicted value | Training records | Test MAE | Test R2 |",
-        "| --- | ---: | ---: | ---: | ---: |",
+        "| Target | Predicted value | Approx P10 | Approx P90 | Training records | Test MAE | Test R2 |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     target_summaries = summary.get("target_summaries", {})
     for target, value in predicted_properties.items():
         detail = target_summaries.get(target, {}) if isinstance(target_summaries, dict) else {}
         lines.append(
-            "| {target} | {value} | {training_records} | {test_mae} | {test_r2} |".format(
+            "| {target} | {value} | {p10} | {p90} | {training_records} | {test_mae} | {test_r2} |".format(
                 target=target,
                 value=_format_value(value),
+                p10=_format_value(detail.get("approx_p10")),
+                p90=_format_value(detail.get("approx_p90")),
                 training_records=detail.get("training_records", 0),
                 test_mae=_format_value(detail.get("test_mae")),
                 test_r2=_format_value(detail.get("test_r2")),

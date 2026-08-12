@@ -97,18 +97,20 @@ def _format_property_prediction_table(
     prediction_summary: dict[str, object],
 ) -> list[str]:
     lines = [
-        "| Target | Descriptor-predicted value | Training records | Test MAE | Test R2 |",
-        "| --- | ---: | ---: | ---: | ---: |",
+        "| Target | Descriptor-predicted value | Approx P10 | Approx P90 | Training records | Test MAE | Test R2 |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     if not predicted_properties:
-        return lines + ["| No property predictions available |  |  |  |  |"]
+        return lines + ["| No property predictions available |  |  |  |  |  |  |"]
     target_summaries = prediction_summary.get("target_summaries", {})
     for target, value in predicted_properties.items():
         detail = target_summaries.get(target, {}) if isinstance(target_summaries, dict) else {}
         lines.append(
-            "| {target} | {value} | {training_records} | {test_mae} | {test_r2} |".format(
+            "| {target} | {value} | {p10} | {p90} | {training_records} | {test_mae} | {test_r2} |".format(
                 target=target,
                 value="not predicted" if value is None else value,
+                p10=detail.get("approx_p10", ""),
+                p90=detail.get("approx_p90", ""),
                 training_records=detail.get("training_records", 0),
                 test_mae=detail.get("test_mae", ""),
                 test_r2=detail.get("test_r2", ""),

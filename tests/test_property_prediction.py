@@ -68,7 +68,11 @@ def test_predict_candidate_properties_uses_descriptors_not_target_metrics() -> N
     assert "co2_n2_selectivity" not in feature_columns
     assert "heat_of_adsorption_kj_mol" not in feature_columns
     assert result.prediction_summary["candidate_descriptor_count"] == 6
-    assert result.prediction_summary["target_summaries"]["co2_uptake_mmol_g"]["test_records"] > 0
+    uptake_summary = result.prediction_summary["target_summaries"]["co2_uptake_mmol_g"]
+    assert uptake_summary["test_records"] > 0
+    assert uptake_summary["prediction_interval_method"] == "random_forest_tree_prediction_p10_p90"
+    assert uptake_summary["approx_p10"] <= result.predicted_properties["co2_uptake_mmol_g"] <= uptake_summary["approx_p90"]
+    assert uptake_summary["tree_std"] >= 0
     comparison = result.prediction_summary["supplied_prediction_comparison"]
     assert comparison["co2_uptake_mmol_g"]["status"] == "not_supplied"
 
@@ -127,5 +131,7 @@ def test_property_prediction_script_writes_prediction_packet(tmp_path: Path) -> 
     assert summary["method"] == "RandomForestRegressor descriptor baseline"
     assert "target adsorption metrics excluded" in summary["feature_policy"]
     assert "supplied_prediction_comparison" in summary
+    assert summary["target_summaries"]["co2_uptake_mmol_g"]["approx_p10"] is not None
     assert "# Candidate Property Prediction Report" in report
+    assert "Approx P10" in report
     assert "## Supplied Vs Descriptor-Predicted Metrics" in report

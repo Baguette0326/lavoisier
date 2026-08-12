@@ -114,6 +114,7 @@ def test_evaluate_unfamiliar_candidate_script_writes_review_packet(tmp_path: Pat
     assert "R&D recommendation: `prioritize_deeper_review`" in report
     assert "## Metric Benchmarks" in report
     assert "## Descriptor-Predicted Properties" in report
+    assert "Approx P10" in report
     assert "## Supplied Vs Descriptor-Predicted Metrics" in report
     assert "## Descriptor Coverage" in report
     assert "## Neighbor Comparison" in report
@@ -132,6 +133,7 @@ def test_evaluate_unfamiliar_candidate_script_writes_review_packet(tmp_path: Pat
     assert predictions["co2_uptake_mmol_g"] is not None
     assert property_summary["candidate_descriptor_count"] == 6
     assert "target adsorption metrics excluded" in property_summary["feature_policy"]
+    assert property_summary["target_summaries"]["co2_uptake_mmol_g"]["approx_p10"] is not None
     assert property_summary["supplied_prediction_comparison"]["co2_uptake_mmol_g"]["status"] in {
         "consistent_with_descriptor_prediction",
         "moderate_supplied_prediction_gap",
