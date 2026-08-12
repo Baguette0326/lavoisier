@@ -1,6 +1,6 @@
 import pandas as pd
 
-from carbonsense.ml_triage import add_rule_triage_labels, classify_candidates
+from carbonsense.ml_triage import add_rule_triage_labels, classify_candidates, triage_unfamiliar_candidate
 
 
 def test_add_rule_triage_labels_marks_promising_candidate() -> None:
@@ -130,3 +130,63 @@ def test_classify_candidates_reports_train_validation_test_split() -> None:
     assert result.training_summary["test_count"] == 8
     assert result.training_summary["validation_accuracy"] is not None
     assert result.training_summary["test_accuracy"] is not None
+
+
+def _similarity_reference_frame() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "material_id": ["strong-a", "strong-b", "balanced", "low-capacity", "poor-selectivity"],
+            "rank_eligible": [True] * 5,
+            "co2_uptake_mmol_g": [5.0, 5.3, 2.6, 0.4, 3.0],
+            "n2_uptake_mmol_g": [0.1, 0.1, 0.1, 0.1, 0.4],
+            "co2_n2_selectivity": [50.0, 52.0, 30.0, 20.0, 7.5],
+            "heat_of_adsorption_kj_mol": [40.0, 42.0, 45.0, 35.0, 40.0],
+            "screening_score": [0.8, 0.82, 0.5, 0.2, 0.3],
+            "temperature_k": [298] * 5,
+            "co2_pressure_bar": [0.2] * 5,
+            "n2_pressure_bar": [1.0] * 5,
+            "force_field": ["UFF"] * 5,
+            "charge_method": ["DDEC"] * 5,
+            "evidence_type": ["computational_gcmc"] * 5,
+            "simulation_method": ["GCMC"] * 5,
+        }
+    )
+
+
+def test_triage_unfamiliar_candidate_finds_similar_known_mofs() -> None:
+    candidate = {
+        "material_id": "new-isomer",
+        "co2_uptake_mmol_g": 5.1,
+        "n2_uptake_mmol_g": 0.1,
+        "co2_n2_selectivity": 51.0,
+        "heat_of_adsorption_kj_mol": 41.0,
+        "temperature_k": 298,
+        "co2_pressure_bar": 0.2,
+        "n2_pressure_bar": 1.0,
+        "force_field": "UFF",
+        "charge_method": "DDEC",
+        "evidence_type": "computational_gcmc",
+        "simulation_method": "GCMC",
+    }
+
+    result = triage_unfamiliar_candidate(_similarity_reference_frame(), candidate, k=3)
+
+    assert result.prediction_summary["method"] == "KNearestNeighbors similarity triage"
+    assert result.prediction_summary["predicted_candidate_class"] == "promising_candidate"
+    assert result.prediction_summary["k_used"] == 3
+    assert list(result.neighbor_records["material_id"][:2]) == ["strong-a", "strong-b"]
+    assert "similarity_distance" in result.neighbor_records.columns
+
+
+def test_triage_unfamiliar_candidate_warns_about_missing_descriptors() -> None:
+    candidate = {
+        "material_id": "sparse-new-mof",
+        "co2_uptake_mmol_g": 5.1,
+        "co2_n2_selectivity": 51.0,
+    }
+
+    result = triage_unfamiliar_candidate(_similarity_reference_frame(), candidate, k=2)
+
+    assert result.prediction_summary["k_used"] == 2
+    assert result.prediction_summary["warnings"]
+    assert "n2_uptake_mmol_g" in result.prediction_summary["warnings"][0]

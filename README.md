@@ -33,7 +33,7 @@ source registry -> dataset review -> schema validation -> ranking -> explainabil
 
 ## Initial Scope
 
-Focus on MOFs for post-combustion-style CO2/N2 adsorption screening. The first target source is CRAFTED 2.0.0 after manual licence/provenance approval.
+Focus on MOFs for post-combustion-style CO2/N2 adsorption screening. The first target source is CRAFTED 2.0.1 after manual licence/provenance approval.
 
 Candidate variables:
 
@@ -101,4 +101,7 @@ The deterministic staging layer for CSV and structured text is documented in [`d
 
 ## Current Status
 
-Early product scaffold. The app supports upload-based screening logic first. Automated source monitoring is planned after the ranking and validation workflow is stable.
+Backend-first screening engine with real local CRAFTED parsing, controlled-slice
+ranking, provenance logging, weak ML triage, and first-pass similarity triage
+for unfamiliar candidates with known descriptors. Automated source monitoring
+and a fuller virtual-lab interface remain later work.

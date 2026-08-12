@@ -15,8 +15,9 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
+from sklearn.neighbors import NearestNeighbors
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 
 NUMERIC_FEATURES = [
@@ -54,6 +55,14 @@ class CandidateClassifierResult:
 
     classified_records: pd.DataFrame
     training_summary: dict[str, object]
+
+
+@dataclass(frozen=True)
+class SimilarityTriageResult:
+    """Result of comparing an unfamiliar candidate with known MOF records."""
+
+    neighbor_records: pd.DataFrame
+    prediction_summary: dict[str, object]
 
 
 def _numeric(value: object) -> float | None:
@@ -145,6 +154,32 @@ def _build_classifier(numeric_features: list[str], categorical_features: list[st
     return Pipeline(steps=[("preprocessor", preprocessor), ("classifier", model)])
 
 
+def _build_similarity_preprocessor(numeric_features: list[str], categorical_features: list[str]) -> ColumnTransformer:
+    transformers = []
+    if numeric_features:
+        transformers.append(
+            (
+                "numeric",
+                Pipeline(steps=[("imputer", SimpleImputer(strategy="median")), ("scaler", StandardScaler())]),
+                numeric_features,
+            )
+        )
+    if categorical_features:
+        transformers.append(
+            (
+                "categorical",
+                Pipeline(
+                    steps=[
+                        ("imputer", SimpleImputer(strategy="most_frequent")),
+                        ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+                    ]
+                ),
+                categorical_features,
+            )
+        )
+    return ColumnTransformer(transformers=transformers, remainder="drop")
+
+
 def _can_split(labels: pd.Series, test_fraction: float) -> bool:
     counts = labels.value_counts()
     test_size = max(1, int(np.ceil(len(labels) * test_fraction)))
@@ -161,6 +196,89 @@ def _top_feature_summary(frame: pd.DataFrame) -> pd.Series:
                 scored.append(f"{column}={value:.4g}")
         summaries.append("; ".join(scored[:3]))
     return pd.Series(summaries, index=frame.index)
+
+
+def _frame_with_feature_columns(frame: pd.DataFrame, feature_columns: list[str]) -> pd.DataFrame:
+    result = frame.copy()
+    for column in feature_columns:
+        if column not in result.columns:
+            result[column] = np.nan
+    return result[feature_columns]
+
+
+def triage_unfamiliar_candidate(
+    reference_frame: pd.DataFrame,
+    candidate: pd.Series | dict[str, object],
+    *,
+    k: int = 5,
+) -> SimilarityTriageResult:
+    """Compare an unfamiliar candidate against known records using nearest neighbors.
+
+    This is a review aid. It does not prove real-world viability; it explains
+    whether the candidate resembles known records that our weak-supervision
+    rules consider promising, balanced, weak, or risky.
+    """
+    if k < 1:
+        raise ValueError("k must be at least 1.")
+
+    labelled = add_rule_triage_labels(reference_frame)
+    numeric_features, categorical_features = _available_features(labelled)
+    if not numeric_features and not categorical_features:
+        raise ValueError("No supported similarity features are available.")
+
+    feature_columns = numeric_features + categorical_features
+    reference = labelled[labelled["rule_candidate_class"].notna()].copy()
+    if reference.empty:
+        raise ValueError("At least one labelled reference record is required.")
+
+    candidate_frame = pd.DataFrame([candidate])
+    preprocessor = _build_similarity_preprocessor(numeric_features, categorical_features)
+    reference_matrix = preprocessor.fit_transform(_frame_with_feature_columns(reference, feature_columns))
+    candidate_matrix = preprocessor.transform(_frame_with_feature_columns(candidate_frame, feature_columns))
+
+    neighbor_count = min(k, len(reference))
+    model = NearestNeighbors(n_neighbors=neighbor_count, metric="euclidean")
+    model.fit(reference_matrix)
+    distances, indices = model.kneighbors(candidate_matrix)
+
+    neighbors = reference.iloc[indices[0]].copy()
+    neighbor_distances = distances[0]
+    weights = 1 / (1 + neighbor_distances)
+    neighbors["similarity_distance"] = np.round(neighbor_distances, 4)
+    neighbors["similarity_weight"] = np.round(weights, 4)
+
+    class_weights: dict[str, float] = {}
+    for label, weight in zip(neighbors["rule_candidate_class"].astype(str), weights, strict=True):
+        class_weights[label] = class_weights.get(label, 0.0) + float(weight)
+    total_weight = sum(class_weights.values())
+    predicted_class = max(class_weights, key=class_weights.get)
+    confidence = class_weights[predicted_class] / total_weight if total_weight else 0.0
+
+    missing_candidate_features = [
+        column for column in feature_columns if column not in candidate_frame.columns or pd.isna(candidate_frame.iloc[0][column])
+    ]
+    warnings: list[str] = []
+    if missing_candidate_features:
+        warnings.append(
+            "Candidate is missing supported descriptor(s): " + ", ".join(missing_candidate_features)
+        )
+    if neighbor_distances[0] > 3:
+        warnings.append("Nearest known MOF is far in feature space; treat the prediction as low-confidence.")
+
+    summary = {
+        "method": "KNearestNeighbors similarity triage",
+        "label_source": "weak_supervision_rule_derived",
+        "k_requested": int(k),
+        "k_used": int(neighbor_count),
+        "feature_columns": feature_columns,
+        "predicted_candidate_class": predicted_class,
+        "prediction_confidence": round(float(confidence), 4),
+        "nearest_distance": round(float(neighbor_distances[0]), 4),
+        "class_weight_vote": {key: round(value, 4) for key, value in sorted(class_weights.items())},
+        "warnings": warnings,
+        "official_use_policy": "Similarity triage is a review aid; it suggests whether deeper simulation or lab review is justified.",
+    }
+    return SimilarityTriageResult(neighbor_records=neighbors, prediction_summary=summary)
 
 
 def classify_candidates(frame: pd.DataFrame) -> CandidateClassifierResult:

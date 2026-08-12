@@ -5,7 +5,7 @@ Lavoisier is backend-first. The Streamlit app is only a thin demonstration layer
 ## Controlled MVP Scope
 
 - Material class: MOF only
-- Source target: CRAFTED 2.0.0 after manual approval
+- Source target: CRAFTED 2.0.1 after manual approval
 - Evidence type: computational GCMC
 - Application context: post-combustion-style CO2/N2 adsorption screening
 - Controlled slice: one temperature, one force field, one charge method, and fixed pressure/metric basis
@@ -22,6 +22,7 @@ source registry
   -> rank eligibility
   -> ranking
   -> weakly supervised ML triage
+  -> similarity triage for unfamiliar candidates with known descriptors
   -> exportable review tables
   -> transformation/provenance log
 ```
@@ -162,6 +163,34 @@ reports/crafted_ml_triage/classified_records.csv
 reports/crafted_ml_triage/ml_triage_summary.json
 ```
 
+## Similarity Triage For Unfamiliar Candidates
+
+The first virtual-lab-oriented backend primitive is
+`triage_unfamiliar_candidate()` in `src/carbonsense/ml_triage.py`.
+
+It accepts:
+
+- a known reference table, such as the ranked CRAFTED slice;
+- one unfamiliar candidate represented by the same supported descriptors;
+- a requested neighbor count `k`.
+
+It returns:
+
+- nearest known MOF records;
+- similarity distances and distance-derived vote weights;
+- a predicted review class, such as `promising_candidate`,
+  `balanced_candidate`, `poor_selectivity`, or `low_capacity`;
+- warnings when the candidate is missing descriptors or appears far from the
+  known reference space.
+
+This does not prove that a new MOF is experimentally viable. It answers a more
+defensible first-pass question:
+
+```text
+Does this unfamiliar candidate resemble known records that are worth deeper
+review, or does it resemble records that were weak, risky, or incomplete?
+```
+
 ## Next Backend Milestones
 
 1. Complete `docs/crafted_approval_checklist.md` before downloading or parsing
@@ -175,7 +204,8 @@ reports/crafted_ml_triage/ml_triage_summary.json
 6. Replace the synthetic transformation log with one backed by approved CRAFTED
    archive checksums and inspected source-file lineage.
 7. Review weakly supervised ML triage output as a secondary review aid.
-8. Only then improve the UI around this backend.
+8. Add a small candidate-input script or API endpoint around similarity triage.
+9. Only then improve the UI around this backend.
 
 ## Roadmap Concepts After Provenance
 
