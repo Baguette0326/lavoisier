@@ -368,6 +368,47 @@ def _next_experiment_steps(
     return steps
 
 
+def _neighbor_advantage(candidate_frame: pd.DataFrame, neighbors: pd.DataFrame) -> tuple[dict[str, object], str]:
+    candidate_row = candidate_frame.iloc[0]
+    comparisons: dict[str, object] = {}
+    favorable_count = 0
+    comparable_count = 0
+    for metric in BENCHMARK_METRICS:
+        if metric not in candidate_frame.columns or metric not in neighbors.columns:
+            continue
+        candidate_value = _numeric(candidate_row.get(metric))
+        neighbor_values = pd.to_numeric(neighbors[metric], errors="coerce").dropna()
+        if candidate_value is None or neighbor_values.empty:
+            continue
+
+        neighbor_median = float(neighbor_values.median())
+        delta = candidate_value - neighbor_median
+        detail: dict[str, object] = {
+            "candidate_value": round(candidate_value, 4),
+            "neighbor_median": round(neighbor_median, 4),
+            "delta_vs_neighbor_median": round(delta, 4),
+        }
+        if metric == "heat_of_adsorption_kj_mol":
+            favorable = 25 <= candidate_value <= 60
+            detail["interpretation"] = "within_target_range" if favorable else "outside_target_range"
+        else:
+            favorable = delta > 0
+            detail["interpretation"] = "above_neighbor_median" if favorable else "not_above_neighbor_median"
+        comparable_count += 1
+        favorable_count += int(favorable)
+        comparisons[metric] = detail
+
+    if comparable_count < len(BENCHMARK_METRICS):
+        verdict = "insufficient_neighbor_comparison"
+    elif favorable_count == comparable_count:
+        verdict = "candidate_advantage_over_neighbors"
+    elif favorable_count >= 2:
+        verdict = "candidate_mixed_advantage_over_neighbors"
+    else:
+        verdict = "candidate_no_clear_neighbor_advantage"
+    return comparisons, verdict
+
+
 def triage_unfamiliar_candidate(
     reference_frame: pd.DataFrame,
     candidate: pd.Series | dict[str, object],
@@ -409,6 +450,7 @@ def triage_unfamiliar_candidate(
     weights = 1 / (1 + neighbor_distances)
     neighbors["similarity_distance"] = np.round(neighbor_distances, 4)
     neighbors["similarity_weight"] = np.round(weights, 4)
+    neighbor_comparison, neighbor_advantage_verdict = _neighbor_advantage(candidate_frame, neighbors)
 
     class_weights: dict[str, float] = {}
     for label, weight in zip(neighbors["rule_candidate_class"].astype(str), weights, strict=True):
@@ -446,6 +488,8 @@ def triage_unfamiliar_candidate(
         "nearest_distance": round(float(neighbor_distances[0]), 4),
         "benchmark_verdict": benchmark_verdict,
         "metric_benchmarks": metric_benchmarks,
+        "neighbor_advantage_verdict": neighbor_advantage_verdict,
+        "neighbor_metric_comparison": neighbor_comparison,
         "rd_recommendation": recommendation,
         "rd_recommendation_reason": recommendation_reason,
         "next_experiment_steps": next_steps,

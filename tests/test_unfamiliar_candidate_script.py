@@ -75,6 +75,7 @@ def test_evaluate_unfamiliar_candidate_script_writes_review_packet(tmp_path: Pat
     assert "Predicted review class: promising_candidate" in completed.stdout
     assert "R&D recommendation: prioritize_deeper_review" in completed.stdout
     assert "Benchmark verdict: competitive_with_reference" in completed.stdout
+    assert "Neighbor advantage: candidate_no_clear_neighbor_advantage" in completed.stdout
     assert "Next experiment steps:" in completed.stdout
     assert "test_neighbor_sensitivity_under_same_conditions" in completed.stdout
     summary = json.loads((output_dir / "candidate_similarity_summary.json").read_text(encoding="utf-8"))
@@ -82,6 +83,8 @@ def test_evaluate_unfamiliar_candidate_script_writes_review_packet(tmp_path: Pat
     assert summary["predicted_candidate_class"] == "promising_candidate"
     assert summary["rd_recommendation"] == "prioritize_deeper_review"
     assert summary["benchmark_verdict"] == "competitive_with_reference"
+    assert summary["neighbor_advantage_verdict"] == "candidate_no_clear_neighbor_advantage"
+    assert "neighbor_metric_comparison" in summary
     assert "metric_benchmarks" in summary
     assert summary["next_experiment_steps"][0]["action"] == "test_neighbor_sensitivity_under_same_conditions"
     assert summary["k_used"] == 2

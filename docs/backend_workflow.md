@@ -186,6 +186,9 @@ It returns:
 - a benchmark verdict comparing the candidate's core metrics against known
   records, such as `above_reference_candidate`, `competitive_with_reference`,
   `mixed_against_reference`, or `below_reference_or_risky`;
+- a nearest-neighbor advantage verdict showing whether the candidate appears
+  better, mixed, or not clearly better than the specific known MOFs it most
+  resembles;
 - next experiment steps, such as completing missing descriptors, checking
   regeneration risk, validating CO2/N2 selectivity, comparing against nearest
   neighbors under identical assumptions, or adding humidity/cycling evidence;
@@ -223,6 +226,11 @@ plus a first-pass heat-of-adsorption target-range check. These benchmarks are
 separate from nearest-neighbor similarity: they help answer whether the
 candidate is merely similar to known materials or actually competitive against
 the reference distribution.
+
+`neighbor_advantage_verdict` is narrower than the benchmark verdict. It compares
+the candidate against only the nearest known records, so a candidate can be
+competitive overall while still showing no clear advantage over the closest
+known alternatives.
 
 `next_experiment_steps` turns the verdict into a small virtual-lab work order.
 These steps are not automatic lab instructions; they identify the next evidence
