@@ -239,6 +239,7 @@ reports/unfamiliar_candidate_triage/nearest_neighbors.csv
 reports/unfamiliar_candidate_triage/candidate_similarity_summary.json
 reports/unfamiliar_candidate_triage/predicted_properties.json
 reports/unfamiliar_candidate_triage/property_prediction_summary.json
+reports/unfamiliar_candidate_triage/candidate_assessment_summary.json
 reports/unfamiliar_candidate_triage/candidate_review_report.md
 ```
 
@@ -261,6 +262,14 @@ structure-based comparison.
 `next_experiment_steps` turns the verdict into a small virtual-lab work order.
 These steps are not automatic lab instructions; they identify the next evidence
 that would make the candidate decision less uncertain.
+
+`candidate_assessment_summary.json` is the final cautious virtual-lab synthesis.
+It combines similarity triage, benchmark verdict, neighbor comparison,
+descriptor-predicted properties, supplied-vs-predicted gaps, and warnings into
+one `final_decision`. The decision categories are review instructions such as
+`prioritize_deeper_review`, `investigate_assumption_gap`,
+`complete_required_inputs`, or `deprioritize_until_new_evidence`; they are not
+claims that a MOF is experimentally viable.
 
 `candidate_review_report.md` is the human-readable export. It summarizes the
 candidate verdict, metric benchmarks, nearest-neighbor comparison, nearest

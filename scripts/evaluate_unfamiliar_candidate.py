@@ -14,6 +14,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from carbonsense.ml_triage import triage_unfamiliar_candidate
 from carbonsense.property_prediction import predict_candidate_properties
+from carbonsense.virtual_lab import synthesize_candidate_assessment
 
 
 DEFAULT_REFERENCE = PROJECT_ROOT / "reports" / "crafted_real_slice_export" / "ranked_records.csv"
@@ -137,6 +138,25 @@ def _format_supplied_prediction_comparison_table(comparisons: dict[str, object])
     return lines
 
 
+def _format_assessment_summary(assessment_summary: dict[str, object]) -> list[str]:
+    lines = [
+        f"- Final decision: `{assessment_summary['final_decision']}`",
+        f"- Viability read: `{assessment_summary['viability_read']}`",
+        f"- Better-than-known read: `{assessment_summary['better_than_known_reference']}`",
+        f"- Review confidence: `{assessment_summary['review_confidence']}`",
+        "",
+        "Decision reasons:",
+    ]
+    for reason in assessment_summary.get("decision_reasons", []):
+        lines.append(f"- {reason}")
+    flags = assessment_summary.get("evidence_flags", [])
+    if flags:
+        lines.extend(["", "Evidence flags:"])
+        for flag in flags:
+            lines.append(f"- `{flag}`")
+    return lines
+
+
 def _format_dataframe_table(frame: pd.DataFrame, columns: list[str], limit: int = 10) -> list[str]:
     if frame.empty or not columns:
         return ["No nearest-neighbor records were available."]
@@ -156,6 +176,7 @@ def build_markdown_report(
     neighbors: pd.DataFrame,
     predicted_properties: dict[str, float | None] | None = None,
     property_prediction_summary: dict[str, object] | None = None,
+    assessment_summary: dict[str, object] | None = None,
 ) -> str:
     candidate_id = candidate.get("material_id", "unidentified candidate")
     lines = [
@@ -176,6 +197,10 @@ def build_markdown_report(
         "## Metric Benchmarks",
         "",
     ]
+    if assessment_summary is not None:
+        lines.extend(["## Virtual Lab Assessment", ""])
+        lines.extend(_format_assessment_summary(assessment_summary))
+        lines.extend([""])
     lines.extend(_format_metric_table(summary.get("metric_benchmarks", {})))
     if predicted_properties is not None and property_prediction_summary is not None:
         lines.extend(["", "## Descriptor-Predicted Properties", ""])
@@ -247,6 +272,8 @@ def build_markdown_report(
         for warning in property_prediction_summary.get("warnings", []):
             lines.append(f"- Property prediction: {warning}")
         lines.append(f"- {property_prediction_summary['official_use_policy']}")
+    if assessment_summary is not None:
+        lines.append(f"- {assessment_summary['official_use_policy']}")
     lines.append(f"- {summary['official_use_policy']}")
     lines.append("- This report is a computational review aid, not proof of experimental viability.")
     return "\n".join(lines) + "\n"
@@ -263,17 +290,20 @@ def main() -> None:
     candidate = load_candidate(candidate_path)
     result = triage_unfamiliar_candidate(reference_frame, candidate, k=args.k)
     property_result = predict_candidate_properties(reference_frame, candidate)
+    assessment_result = synthesize_candidate_assessment(result.prediction_summary, property_result.prediction_summary)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     neighbors_path = args.output_dir / "nearest_neighbors.csv"
     summary_path = args.output_dir / "candidate_similarity_summary.json"
     predicted_properties_path = args.output_dir / "predicted_properties.json"
     property_summary_path = args.output_dir / "property_prediction_summary.json"
+    assessment_summary_path = args.output_dir / "candidate_assessment_summary.json"
     report_path = args.output_dir / "candidate_review_report.md"
     result.neighbor_records.to_csv(neighbors_path, index=False)
     summary_path.write_text(json.dumps(result.prediction_summary, indent=2), encoding="utf-8")
     predicted_properties_path.write_text(json.dumps(property_result.predicted_properties, indent=2), encoding="utf-8")
     property_summary_path.write_text(json.dumps(property_result.prediction_summary, indent=2), encoding="utf-8")
+    assessment_summary_path.write_text(json.dumps(assessment_result.assessment_summary, indent=2), encoding="utf-8")
     report_path.write_text(
         build_markdown_report(
             candidate,
@@ -281,6 +311,7 @@ def main() -> None:
             result.neighbor_records,
             property_result.predicted_properties,
             property_result.prediction_summary,
+            assessment_result.assessment_summary,
         ),
         encoding="utf-8",
     )
@@ -289,6 +320,9 @@ def main() -> None:
     print(f"Candidate: {candidate_id}")
     print(f"Predicted review class: {result.prediction_summary['predicted_candidate_class']}")
     print(f"R&D recommendation: {result.prediction_summary['rd_recommendation']}")
+    print(f"Virtual lab decision: {assessment_result.assessment_summary['final_decision']}")
+    print(f"Viability read: {assessment_result.assessment_summary['viability_read']}")
+    print(f"Better-than-known read: {assessment_result.assessment_summary['better_than_known_reference']}")
     print(f"Recommendation reason: {result.prediction_summary['rd_recommendation_reason']}")
     print(f"Benchmark verdict: {result.prediction_summary['benchmark_verdict']}")
     print(f"Neighbor advantage: {result.prediction_summary['neighbor_advantage_verdict']}")
@@ -320,6 +354,7 @@ def main() -> None:
     print(f"Wrote {display_path(summary_path)}")
     print(f"Wrote {display_path(predicted_properties_path)}")
     print(f"Wrote {display_path(property_summary_path)}")
+    print(f"Wrote {display_path(assessment_summary_path)}")
     print(f"Wrote {display_path(report_path)}")
 
 

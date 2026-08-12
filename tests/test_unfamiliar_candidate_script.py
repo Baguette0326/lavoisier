@@ -93,6 +93,8 @@ def test_evaluate_unfamiliar_candidate_script_writes_review_packet(tmp_path: Pat
     assert "Predicted review class: promising_candidate" in completed.stdout
     assert "candidate_review_report.md" in completed.stdout
     assert "R&D recommendation: prioritize_deeper_review" in completed.stdout
+    assert "Virtual lab decision:" in completed.stdout
+    assert "Viability read:" in completed.stdout
     assert "Benchmark verdict: above_reference_candidate" in completed.stdout
     assert "Neighbor advantage: candidate_advantage_over_neighbors" in completed.stdout
     assert "Descriptor-predicted properties:" in completed.stdout
@@ -103,10 +105,12 @@ def test_evaluate_unfamiliar_candidate_script_writes_review_packet(tmp_path: Pat
     summary = json.loads((output_dir / "candidate_similarity_summary.json").read_text(encoding="utf-8"))
     predictions = json.loads((output_dir / "predicted_properties.json").read_text(encoding="utf-8"))
     property_summary = json.loads((output_dir / "property_prediction_summary.json").read_text(encoding="utf-8"))
+    assessment = json.loads((output_dir / "candidate_assessment_summary.json").read_text(encoding="utf-8"))
     report = (output_dir / "candidate_review_report.md").read_text(encoding="utf-8")
     neighbors = pd.read_csv(output_dir / "nearest_neighbors.csv")
     assert "# Candidate Review Report" in report
     assert "## Verdict" in report
+    assert "## Virtual Lab Assessment" in report
     assert "R&D recommendation: `prioritize_deeper_review`" in report
     assert "## Metric Benchmarks" in report
     assert "## Descriptor-Predicted Properties" in report
@@ -133,4 +137,11 @@ def test_evaluate_unfamiliar_candidate_script_writes_review_packet(tmp_path: Pat
         "moderate_supplied_prediction_gap",
         "large_supplied_prediction_gap",
     }
+    assert assessment["method"] == "rule_based_virtual_lab_assessment"
+    assert assessment["final_decision"] in {
+        "prioritize_deeper_review",
+        "investigate_assumption_gap",
+        "review_with_caution",
+    }
+    assert assessment["official_use_policy"].startswith("This assessment is a triage synthesis")
     assert neighbors["material_id"].tolist() == ["strong-d", "strong-a"]
