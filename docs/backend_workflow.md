@@ -205,6 +205,8 @@ It returns:
 - a nearest-neighbor advantage verdict showing whether the candidate appears
   better, mixed, or not clearly better than the specific known MOFs it most
   resembles;
+- descriptor coverage showing how many structural descriptors the candidate
+  supplied and how many reference rows have descriptor support;
 - next experiment steps, such as completing missing descriptors, checking
   regeneration risk, validating CO2/N2 selectivity, comparing against nearest
   neighbors under identical assumptions, or adding humidity/cycling evidence;
@@ -248,6 +250,11 @@ the reference distribution.
 the candidate against only the nearest known records, so a candidate can be
 competitive overall while still showing no clear advantage over the closest
 known alternatives.
+
+`descriptor_coverage` makes structure-aware uncertainty visible. If the
+candidate is missing structural descriptors or the reference table has partial
+descriptor coverage, the report states that instead of implying a complete
+structure-based comparison.
 
 `next_experiment_steps` turns the verdict into a small virtual-lab work order.
 These steps are not automatic lab instructions; they identify the next evidence

@@ -77,6 +77,7 @@ def test_evaluate_unfamiliar_candidate_script_writes_review_packet(tmp_path: Pat
     assert "R&D recommendation: prioritize_deeper_review" in completed.stdout
     assert "Benchmark verdict: competitive_with_reference" in completed.stdout
     assert "Neighbor advantage: candidate_no_clear_neighbor_advantage" in completed.stdout
+    assert "Descriptor coverage: 0/6 candidate descriptors, 0/3 reference rows with descriptors" in completed.stdout
     assert "Next experiment steps:" in completed.stdout
     assert "test_neighbor_sensitivity_under_same_conditions" in completed.stdout
     summary = json.loads((output_dir / "candidate_similarity_summary.json").read_text(encoding="utf-8"))
@@ -86,6 +87,7 @@ def test_evaluate_unfamiliar_candidate_script_writes_review_packet(tmp_path: Pat
     assert "## Verdict" in report
     assert "R&D recommendation: `prioritize_deeper_review`" in report
     assert "## Metric Benchmarks" in report
+    assert "## Descriptor Coverage" in report
     assert "## Neighbor Comparison" in report
     assert "## Nearest Neighbors" in report
     assert "## Next Experiment Steps" in report
@@ -94,6 +96,7 @@ def test_evaluate_unfamiliar_candidate_script_writes_review_packet(tmp_path: Pat
     assert summary["rd_recommendation"] == "prioritize_deeper_review"
     assert summary["benchmark_verdict"] == "competitive_with_reference"
     assert summary["neighbor_advantage_verdict"] == "candidate_no_clear_neighbor_advantage"
+    assert summary["descriptor_coverage"]["candidate_supplied_count"] == 0
     assert "neighbor_metric_comparison" in summary
     assert "metric_benchmarks" in summary
     assert summary["next_experiment_steps"][0]["action"] == "test_neighbor_sensitivity_under_same_conditions"

@@ -49,6 +49,15 @@ BENCHMARK_METRICS = (
     "heat_of_adsorption_kj_mol",
 )
 
+STRUCTURAL_DESCRIPTOR_FEATURES = (
+    "surface_area_m2_g",
+    "pore_volume_cm3_g",
+    "density_g_cm3",
+    "pore_limiting_diameter_a",
+    "largest_cavity_diameter_a",
+    "void_fraction",
+)
+
 TRIAGE_CLASS_ORDER = (
     "manual_review_required",
     "needs_more_data",
@@ -314,6 +323,34 @@ def _metric_benchmarks(reference: pd.DataFrame, candidate_frame: pd.DataFrame) -
     return benchmarks, verdict
 
 
+def _descriptor_coverage(reference: pd.DataFrame, candidate_frame: pd.DataFrame) -> dict[str, object]:
+    available_descriptors = [column for column in STRUCTURAL_DESCRIPTOR_FEATURES if column in reference.columns]
+    candidate_supplied = [
+        column
+        for column in STRUCTURAL_DESCRIPTOR_FEATURES
+        if column in candidate_frame.columns and _numeric(candidate_frame.iloc[0].get(column)) is not None
+    ]
+    reference_rows_with_any_descriptor = 0
+    reference_rows_with_all_descriptors = 0
+    if available_descriptors:
+        descriptor_values = reference[available_descriptors].apply(pd.to_numeric, errors="coerce")
+        reference_rows_with_any_descriptor = int(descriptor_values.notna().any(axis=1).sum())
+        reference_rows_with_all_descriptors = int(descriptor_values.notna().all(axis=1).sum())
+    missing_candidate_descriptors = [
+        column for column in STRUCTURAL_DESCRIPTOR_FEATURES if column not in candidate_supplied
+    ]
+    return {
+        "descriptor_features": list(STRUCTURAL_DESCRIPTOR_FEATURES),
+        "candidate_supplied_count": len(candidate_supplied),
+        "candidate_required_count": len(STRUCTURAL_DESCRIPTOR_FEATURES),
+        "candidate_supplied_descriptors": candidate_supplied,
+        "candidate_missing_descriptors": missing_candidate_descriptors,
+        "reference_record_count": int(len(reference)),
+        "reference_rows_with_any_descriptor": reference_rows_with_any_descriptor,
+        "reference_rows_with_all_descriptors": reference_rows_with_all_descriptors,
+    }
+
+
 def _next_experiment_steps(
     predicted_class: str,
     benchmark_verdict: str,
@@ -456,6 +493,7 @@ def triage_unfamiliar_candidate(
 
     candidate_frame = pd.DataFrame([candidate])
     metric_benchmarks, benchmark_verdict = _metric_benchmarks(reference, candidate_frame)
+    descriptor_coverage = _descriptor_coverage(reference, candidate_frame)
     preprocessor = _build_similarity_preprocessor(numeric_features, categorical_features)
     reference_matrix = preprocessor.fit_transform(_frame_with_feature_columns(reference, feature_columns))
     candidate_matrix = preprocessor.transform(_frame_with_feature_columns(candidate_frame, feature_columns))
@@ -508,6 +546,7 @@ def triage_unfamiliar_candidate(
         "nearest_distance": round(float(neighbor_distances[0]), 4),
         "benchmark_verdict": benchmark_verdict,
         "metric_benchmarks": metric_benchmarks,
+        "descriptor_coverage": descriptor_coverage,
         "neighbor_advantage_verdict": neighbor_advantage_verdict,
         "neighbor_metric_comparison": neighbor_comparison,
         "rd_recommendation": recommendation,

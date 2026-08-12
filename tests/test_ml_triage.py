@@ -179,6 +179,8 @@ def test_triage_unfamiliar_candidate_finds_similar_known_mofs() -> None:
     assert result.prediction_summary["metric_benchmarks"]["heat_of_adsorption_kj_mol"]["target_status"] == (
         "inside_first_pass_target_range"
     )
+    assert result.prediction_summary["descriptor_coverage"]["candidate_supplied_count"] == 0
+    assert result.prediction_summary["descriptor_coverage"]["reference_rows_with_any_descriptor"] == 0
     assert result.prediction_summary["neighbor_advantage_verdict"] == "candidate_advantage_over_neighbors"
     assert result.prediction_summary["neighbor_metric_comparison"]["co2_n2_selectivity"]["interpretation"] == (
         "above_neighbor_median"

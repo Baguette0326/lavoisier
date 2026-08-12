@@ -128,6 +128,20 @@ def build_markdown_report(
         "",
     ]
     lines.extend(_format_metric_table(summary.get("metric_benchmarks", {})))
+    coverage = summary.get("descriptor_coverage", {})
+    lines.extend(
+        [
+            "",
+            "## Descriptor Coverage",
+            "",
+            f"- Candidate supplied descriptors: `{coverage.get('candidate_supplied_count', 0)}` / `{coverage.get('candidate_required_count', 0)}`",
+            f"- Reference rows with any descriptor: `{coverage.get('reference_rows_with_any_descriptor', 0)}` / `{coverage.get('reference_record_count', 0)}`",
+            f"- Reference rows with all descriptors: `{coverage.get('reference_rows_with_all_descriptors', 0)}` / `{coverage.get('reference_record_count', 0)}`",
+        ]
+    )
+    missing = coverage.get("candidate_missing_descriptors", [])
+    if missing:
+        lines.append("- Missing candidate descriptors: `" + "`, `".join(missing) + "`")
     lines.extend(["", "## Neighbor Comparison", ""])
     lines.extend(_format_neighbor_comparison_table(summary.get("neighbor_metric_comparison", {})))
     lines.extend(["", "## Nearest Neighbors", ""])
@@ -197,6 +211,12 @@ def main() -> None:
     print(f"Recommendation reason: {result.prediction_summary['rd_recommendation_reason']}")
     print(f"Benchmark verdict: {result.prediction_summary['benchmark_verdict']}")
     print(f"Neighbor advantage: {result.prediction_summary['neighbor_advantage_verdict']}")
+    coverage = result.prediction_summary["descriptor_coverage"]
+    print(
+        "Descriptor coverage: "
+        f"{coverage['candidate_supplied_count']}/{coverage['candidate_required_count']} candidate descriptors, "
+        f"{coverage['reference_rows_with_any_descriptor']}/{coverage['reference_record_count']} reference rows with descriptors"
+    )
     print(f"Confidence: {result.prediction_summary['prediction_confidence']}")
     print(f"Nearest distance: {result.prediction_summary['nearest_distance']}")
     print("Next experiment steps:")
