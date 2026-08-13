@@ -76,10 +76,17 @@ mark missing CoRE matches explicitly
 keep CoRE-derived descriptors separate from CRAFTED adsorption metrics
 ```
 
-## Next Implementation Step
+## Enrichment Adapter
 
-Build a CoRE MOF 2014 enrichment adapter that extracts safe metadata from the
-matched CoRE CIFs, such as:
+Implemented:
+
+```bash
+python scripts/export_core2014_enrichment.py
+python scripts/run_crafted_real_slice.py
+```
+
+The CoRE MOF 2014 enrichment adapter extracts safe metadata from matched CoRE
+CIFs, such as:
 
 - CSD-style identifier;
 - chemical formula if present;
@@ -88,5 +95,20 @@ matched CoRE CIFs, such as:
 - whether the CoRE file was `_clean`;
 - CoRE source DOI/license attribution.
 
-Do not add chemistry-derived features to the ML model until the adapter can
-prove exact join coverage and provenance for each enriched record.
+Current enrichment result:
+
+```text
+Target CRAFTED MOF IDs: 690
+Matched CoRE records: 679
+Missing CoRE records: 11
+Match fraction: 0.9841
+```
+
+The real CRAFTED slice runner now joins this enrichment into
+`data/processed/crafted_2_0_1/crafted_screening_slice.csv` and
+`reports/crafted_real_slice_export/ranked_records.csv` when the local enrichment
+CSV exists.
+
+Do not add chemistry-derived features to the ML model until the enriched records
+are evaluated separately from adsorption metrics and missing CoRE matches remain
+visible.

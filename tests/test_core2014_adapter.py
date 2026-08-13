@@ -5,6 +5,7 @@ import pandas as pd
 
 from carbonsense.core2014_adapter import (
     build_core2014_enrichment,
+    join_core2014_enrichment,
     load_core2014_records,
     normalize_core2014_member_name,
 )
@@ -77,3 +78,32 @@ def test_build_core2014_enrichment_preserves_missing_targets() -> None:
     assert enrichment["material_id"].tolist() == ["ABUWOJ", "MISSING"]
     assert enrichment["core_match_status"].tolist() == ["matched_core2014", "missing_core2014"]
     assert enrichment.loc[1, "core_source_version"] == "CoRE MOF 2014 DDEC"
+
+
+def test_join_core2014_enrichment_preserves_screening_rows() -> None:
+    screening = pd.DataFrame(
+        {
+            "material_id": ["ABUWOJ", "UNMATCHED"],
+            "co2_uptake_mmol_g": [4.2, 1.1],
+        }
+    )
+    enrichment = pd.DataFrame(
+        [
+            {
+                "material_id": "ABUWOJ",
+                "core_match_status": "matched_core2014",
+                "core_source_file": "./re-labeled/ABUWOJ_clean.cif",
+                "core_formula_sum": "Zn16 H56 C96 O56",
+                "core_source_version": "CoRE MOF 2014 DDEC",
+                "core_source_doi": "10.5281/zenodo.3986573",
+                "core_license": "CC BY 4.0",
+            }
+        ]
+    )
+
+    joined = join_core2014_enrichment(screening, enrichment)
+
+    assert joined["material_id"].tolist() == ["ABUWOJ", "UNMATCHED"]
+    assert joined["core_match_status"].tolist() == ["matched_core2014", "missing_core2014"]
+    assert joined.loc[0, "core_formula_sum"] == "Zn16 H56 C96 O56"
+    assert joined.loc[1, "core_source_version"] == "CoRE MOF 2014 DDEC"

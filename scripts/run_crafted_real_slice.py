@@ -11,6 +11,8 @@ import argparse
 from pathlib import Path
 import sys
 
+import pandas as pd
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
@@ -21,6 +23,7 @@ from carbonsense.crafted_adapter import (
     load_crafted_mof_geometric_descriptors,
     parse_crafted_real_slice,
 )
+from carbonsense.core2014_adapter import join_core2014_enrichment
 from carbonsense.pipeline import export_result, run_crafted_screening_pipeline
 
 
@@ -29,6 +32,7 @@ DEFAULT_ARCHIVE = PROJECT_ROOT / "data" / "raw" / "crafted_2_0_1" / "CRAFTED-2.0
 DEFAULT_PROCESSED_DIR = PROJECT_ROOT / "data" / "processed" / "crafted_2_0_1"
 DEFAULT_REPORT_DIR = PROJECT_ROOT / "reports" / "crafted_real_slice_export"
 DEFAULT_DESCRIPTOR_FILE = DEFAULT_ROOT / "RAC_DBSCAN" / "CRAFTED_MOF_geometric.csv"
+DEFAULT_CORE2014_ENRICHMENT = PROJECT_ROOT / "reports" / "core_mof_2014_enrichment" / "core2014_enrichment.csv"
 
 
 def parse_args() -> argparse.Namespace:
@@ -36,6 +40,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="Extracted CRAFTED 2.0.1 folder.")
     parser.add_argument("--archive", type=Path, default=DEFAULT_ARCHIVE, help="Downloaded CRAFTED archive path.")
     parser.add_argument("--descriptor-file", type=Path, default=DEFAULT_DESCRIPTOR_FILE)
+    parser.add_argument("--core2014-enrichment", type=Path, default=DEFAULT_CORE2014_ENRICHMENT)
     parser.add_argument("--processed-dir", type=Path, default=DEFAULT_PROCESSED_DIR)
     parser.add_argument("--report-dir", type=Path, default=DEFAULT_REPORT_DIR)
     parser.add_argument("--limit", type=int, default=None, help="Optional material limit for smoke testing.")
@@ -59,6 +64,12 @@ def main() -> None:
         descriptors = load_crafted_mof_geometric_descriptors(descriptor_file)
         screening = join_crafted_geometric_descriptors(screening, descriptors)
         descriptor_match_count = int(screening["descriptor_match_status"].eq("matched_crafted_mof_geometric").sum())
+    core_enrichment_file = args.core2014_enrichment.resolve()
+    core_match_count = 0
+    if core_enrichment_file.exists() and not screening.empty:
+        core_enrichment = pd.read_csv(core_enrichment_file)
+        screening = join_core2014_enrichment(screening, core_enrichment)
+        core_match_count = int(screening["core_match_status"].eq("matched_core2014").sum())
 
     args.processed_dir.mkdir(parents=True, exist_ok=True)
     long_path = args.processed_dir / "crafted_isotherm_long.csv"
@@ -87,6 +98,7 @@ def main() -> None:
     print(f"Long records: {len(long_table)}")
     print(f"Screening records: {len(screening)}")
     print(f"Descriptor-matched screening records: {descriptor_match_count}")
+    print(f"CoRE-enriched screening records: {core_match_count}")
     print(f"Parser-blocked records: {len(parser_blocked)}")
     print(f"Ranked records: {len(result.ranked_records)}")
     print(f"Backend-blocked records: {result.metadata.blocked_count}")

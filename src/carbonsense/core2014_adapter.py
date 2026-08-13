@@ -171,6 +171,30 @@ def build_core2014_enrichment(core_records: pd.DataFrame, target_ids: set[str]) 
     return enriched
 
 
+def join_core2014_enrichment(screening: pd.DataFrame, enrichment: pd.DataFrame) -> pd.DataFrame:
+    """Attach CoRE MOF 2014 descriptor/provenance columns to screening records."""
+    if screening.empty:
+        return screening.copy()
+    if "material_id" not in screening.columns:
+        raise ValueError("Screening table must include material_id before CoRE enrichment join.")
+    if "material_id" not in enrichment.columns:
+        raise ValueError("CoRE enrichment table must include material_id before join.")
+
+    deduped = enrichment.drop_duplicates(subset=["material_id"], keep="first")
+    joined = screening.merge(deduped, on="material_id", how="left", validate="many_to_one")
+    joined["core_match_status"] = joined["core_match_status"].fillna("missing_core2014")
+    for column, value in (
+        ("core_source_version", CORE2014_SOURCE_VERSION),
+        ("core_source_doi", CORE2014_SOURCE_DOI),
+        ("core_license", CORE2014_LICENSE),
+    ):
+        if column not in joined.columns:
+            joined[column] = value
+        else:
+            joined[column] = joined[column].fillna(value)
+    return joined
+
+
 def load_crafted_geometric_target_ids(path: Path) -> set[str]:
     """Load CRAFTED geometric FrameworkName IDs as the CoRE join target."""
     if not path.exists():
