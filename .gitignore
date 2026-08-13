@@ -24,6 +24,7 @@ reports/unfamiliar_candidate_property_prediction*/
 reports/virtual_lab_demo*/
 reports/external_validation*/
 reports/core_mof_2014_join_inspection*/
+reports/qmof_join_inspection*/
 *.zip
 *.pkl
 *.joblib
