@@ -34,17 +34,20 @@ def build_markdown_report(result: dict[str, object]) -> str:
         "",
         f"Method: `{comparison['method']}`",
         "",
-        "| Target | Status | Baseline MAE | CoRE+Baseline MAE | MAE delta | Baseline R2 | CoRE+Baseline R2 |",
-        "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
+        "| Target | Status | Baseline MAE | CoRE+Baseline MAE | MAE delta | Improved splits | Baseline R2 | CoRE+Baseline R2 |",
+        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for target, detail in target_comparisons.items():
         lines.append(
-            "| {target} | {status} | {baseline_mae} | {candidate_mae} | {delta} | {baseline_r2} | {candidate_r2} |".format(
+            "| {target} | {status} | {baseline_mae} | {candidate_mae} | {delta} | {improved_splits} | {baseline_r2} | {candidate_r2} |".format(
                 target=target,
                 status=detail["status"],
                 baseline_mae=detail["baseline_test_mae"],
                 candidate_mae=detail["candidate_test_mae"],
                 delta=detail["mae_delta_candidate_minus_baseline"],
+                improved_splits=(
+                    f"{detail.get('candidate_improved_split_count')}/{detail.get('comparable_split_count')}"
+                ),
                 baseline_r2=detail.get("baseline_test_r2"),
                 candidate_r2=detail.get("candidate_test_r2"),
             )
@@ -91,7 +94,10 @@ def main() -> None:
     for target, detail in result.comparison_summary["target_comparisons"].items():
         print(
             f"{target}: {detail['status']} "
-            f"(baseline MAE={detail['baseline_test_mae']}, CoRE+baseline MAE={detail['candidate_test_mae']})"
+            f"(baseline MAE={detail['baseline_test_mae']}, "
+            f"CoRE+baseline MAE={detail['candidate_test_mae']}, "
+            f"improved splits={detail.get('candidate_improved_split_count')}/"
+            f"{detail.get('comparable_split_count')})"
         )
     print(f"Wrote {json_path}")
     print(f"Wrote {report_path}")

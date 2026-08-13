@@ -152,17 +152,21 @@ def test_property_prediction_script_writes_prediction_packet(tmp_path: Path) -> 
 
 
 def test_evaluate_property_prediction_feature_sets_compares_core_enrichment() -> None:
-    result = evaluate_property_prediction_feature_sets(_reference_frame(40))
+    result = evaluate_property_prediction_feature_sets(_reference_frame(40), random_seeds=(1, 2, 3))
 
     assert set(result.target_results) == set(PREDICTION_TARGETS)
     uptake = result.target_results["co2_uptake_mmol_g"]
     assert uptake["crafted_geometric"]["status"] == "evaluated"
     assert uptake["crafted_geometric_plus_core2014"]["status"] == "evaluated"
+    assert uptake["crafted_geometric"]["split_count"] == 3
+    assert len(uptake["crafted_geometric"]["split_metrics"]) == 3
     assert "core_cell_volume" in uptake["crafted_geometric_plus_core2014"]["feature_columns"]
     assert "core_cell_volume" not in uptake["crafted_geometric"]["feature_columns"]
     comparison = result.comparison_summary["target_comparisons"]["co2_uptake_mmol_g"]
     assert comparison["baseline_test_mae"] is not None
     assert comparison["candidate_test_mae"] is not None
+    assert comparison["comparable_split_count"] == 3
+    assert len(comparison["split_mae_deltas_candidate_minus_baseline"]) == 3
 
 
 def test_evaluate_descriptor_feature_sets_script_writes_reports(tmp_path: Path) -> None:
@@ -186,8 +190,11 @@ def test_evaluate_descriptor_feature_sets_script_writes_reports(tmp_path: Path) 
     )
 
     assert "Descriptor feature-set evaluation complete." in completed.stdout
+    assert "improved splits=" in completed.stdout
     payload = json.loads((output_dir / "descriptor_feature_set_evaluation.json").read_text(encoding="utf-8"))
     report = (output_dir / "descriptor_feature_set_evaluation.md").read_text(encoding="utf-8")
     assert "comparison_summary" in payload
     assert "crafted_geometric_plus_core2014" == payload["comparison_summary"]["candidate_feature_set"]
+    assert "RandomForestRegressor repeated holdout" in payload["comparison_summary"]["method"]
     assert "# Descriptor Feature Set Evaluation" in report
+    assert "Improved splits" in report

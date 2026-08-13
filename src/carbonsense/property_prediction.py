@@ -55,6 +55,7 @@ PREDICTION_TARGETS = (
 
 MINIMUM_TARGET_RECORDS = 5
 HOLDOUT_TARGET_RECORDS = 20
+DEFAULT_EVALUATION_RANDOM_SEEDS = (11, 23, 42, 71, 101)
 MODERATE_RELATIVE_GAP = 0.15
 LARGE_RELATIVE_GAP = 0.35
 
@@ -119,6 +120,18 @@ def _build_regressor() -> Pipeline:
             ),
         ]
     )
+
+
+def _mean(values: Sequence[float]) -> float | None:
+    if not values:
+        return None
+    return round(float(np.mean(values)), 4)
+
+
+def _std(values: Sequence[float]) -> float | None:
+    if len(values) < 2:
+        return None
+    return round(float(np.std(values, ddof=1)), 4)
 
 
 def _forest_prediction_interval(model: Pipeline, candidate_features: pd.DataFrame) -> dict[str, float | None]:
@@ -338,8 +351,9 @@ def evaluate_property_prediction_feature_sets(
     *,
     targets: Sequence[str] = PREDICTION_TARGETS,
     feature_sets: Mapping[str, Sequence[str]] | None = None,
+    random_seeds: Sequence[int] = DEFAULT_EVALUATION_RANDOM_SEEDS,
 ) -> FeatureSetEvaluationResult:
-    """Compare held-out prediction quality for descriptor feature sets."""
+    """Compare repeated held-out prediction quality for descriptor feature sets."""
     active_feature_sets = feature_sets or {
         "crafted_geometric": (*STRUCTURAL_DESCRIPTOR_FEATURES, *CONDITION_FEATURES),
         "crafted_geometric_plus_core2014": (
@@ -395,26 +409,44 @@ def evaluate_property_prediction_feature_sets(
 
             x = feature_frame.loc[usable_rows, feature_columns]
             y = target_values.loc[usable_rows]
-            x_train, x_test, y_train, y_test = train_test_split(
-                x,
-                y,
-                test_size=0.2,
-                random_state=42,
-            )
-            model = _build_regressor()
-            model.fit(x_train, y_train)
-            predictions = model.predict(x_test)
+            split_metrics: list[dict[str, float | int | None]] = []
+            for seed in random_seeds:
+                x_train, x_test, y_train, y_test = train_test_split(
+                    x,
+                    y,
+                    test_size=0.2,
+                    random_state=seed,
+                )
+                model = _build_regressor()
+                model.fit(x_train, y_train)
+                predictions = model.predict(x_test)
+                split_metrics.append(
+                    {
+                        "random_seed": seed,
+                        "test_records": int(len(x_test)),
+                        "test_mae": round(float(mean_absolute_error(y_test, predictions)), 4),
+                        "test_r2": round(float(r2_score(y_test, predictions)), 4) if len(x_test) >= 2 else None,
+                    }
+                )
+            mae_values = [float(metric["test_mae"]) for metric in split_metrics if metric["test_mae"] is not None]
+            r2_values = [float(metric["test_r2"]) for metric in split_metrics if metric["test_r2"] is not None]
             target_results[target][feature_set_name] = {
                 "status": "evaluated",
                 "feature_columns": feature_columns,
-                "training_records": int(len(x_train)),
-                "test_records": int(len(x_test)),
-                "test_mae": round(float(mean_absolute_error(y_test, predictions)), 4),
-                "test_r2": round(float(r2_score(y_test, predictions)), 4) if len(x_test) >= 2 else None,
+                "usable_records": usable_count,
+                "training_records_per_split": int(len(x_train)),
+                "test_records_per_split": int(len(x_test)),
+                "split_count": len(split_metrics),
+                "random_seeds": list(random_seeds),
+                "test_mae": _mean(mae_values),
+                "test_mae_std": _std(mae_values),
+                "test_r2": _mean(r2_values),
+                "test_r2_std": _std(r2_values),
+                "split_metrics": split_metrics,
             }
 
     comparison_summary: dict[str, object] = {
-        "method": "RandomForestRegressor held-out feature-set comparison",
+        "method": "RandomForestRegressor repeated holdout feature-set comparison",
         "baseline_feature_set": "crafted_geometric",
         "candidate_feature_set": "crafted_geometric_plus_core2014",
         "target_comparisons": {},
@@ -439,10 +471,26 @@ def evaluate_property_prediction_feature_sets(
             }
             continue
         mae_delta = round(float(candidate_mae) - float(baseline_mae), 4)
-        if mae_delta < 0:
-            status = "candidate_feature_set_improved_mae"
+        baseline_splits = baseline.get("split_metrics", [])
+        candidate_splits = candidate.get("split_metrics", [])
+        split_deltas: list[float] = []
+        if isinstance(baseline_splits, list) and isinstance(candidate_splits, list):
+            for baseline_split, candidate_split in zip(baseline_splits, candidate_splits, strict=False):
+                baseline_split_mae = baseline_split.get("test_mae") if isinstance(baseline_split, dict) else None
+                candidate_split_mae = candidate_split.get("test_mae") if isinstance(candidate_split, dict) else None
+                if baseline_split_mae is not None and candidate_split_mae is not None:
+                    split_deltas.append(round(float(candidate_split_mae) - float(baseline_split_mae), 4))
+        improvement_count = sum(1 for delta in split_deltas if delta < 0)
+        split_count = len(split_deltas)
+        improvement_fraction = round(improvement_count / split_count, 4) if split_count else None
+        if mae_delta < 0 and improvement_fraction is not None and improvement_fraction >= 0.6:
+            status = "candidate_feature_set_stably_improved_mae"
+        elif mae_delta > 0 and improvement_fraction is not None and improvement_fraction <= 0.4:
+            status = "candidate_feature_set_stably_worse_mae"
+        elif mae_delta < 0:
+            status = "candidate_feature_set_mixed_improved_mae"
         elif mae_delta > 0:
-            status = "candidate_feature_set_worse_mae"
+            status = "candidate_feature_set_mixed_worse_mae"
         else:
             status = "candidate_feature_set_tied_mae"
         target_comparisons[target] = {
@@ -450,6 +498,10 @@ def evaluate_property_prediction_feature_sets(
             "baseline_test_mae": baseline_mae,
             "candidate_test_mae": candidate_mae,
             "mae_delta_candidate_minus_baseline": mae_delta,
+            "split_mae_deltas_candidate_minus_baseline": split_deltas,
+            "candidate_improved_split_count": improvement_count,
+            "comparable_split_count": split_count,
+            "candidate_improved_split_fraction": improvement_fraction,
             "baseline_test_r2": baseline.get("test_r2"),
             "candidate_test_r2": candidate.get("test_r2"),
         }

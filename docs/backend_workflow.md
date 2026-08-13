@@ -365,7 +365,10 @@ This compares:
   descriptors such as cell lengths, angles, volume, formula units, and space
   group number.
 
-Current held-out result on the controlled CRAFTED slice:
+The evaluation uses repeated 80/20 holdout splits with fixed seeds so the
+decision is less likely to depend on one lucky train/test split.
+
+Current repeated-holdout result on the controlled CRAFTED slice:
 
 ```text
 co2_uptake_mmol_g: CoRE features improved MAE slightly
