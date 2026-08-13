@@ -1,0 +1,20 @@
+{
+  "material_id": "Demo-Consistent-Promising-MOF",
+  "co2_uptake_mmol_g": 3.2,
+  "n2_uptake_mmol_g": 0.12,
+  "co2_n2_selectivity": 32.0,
+  "heat_of_adsorption_kj_mol": 28.0,
+  "surface_area_m2_g": 1800.0,
+  "pore_volume_cm3_g": 0.8,
+  "density_g_cm3": 0.95,
+  "pore_limiting_diameter_a": 4.2,
+  "largest_cavity_diameter_a": 6.1,
+  "void_fraction": 0.18,
+  "temperature_k": 298,
+  "co2_pressure_bar": 0.2,
+  "n2_pressure_bar": 1.0,
+  "force_field": "UFF",
+  "charge_method": "DDEC",
+  "evidence_type": "user_supplied_candidate_claim",
+  "simulation_method": "unknown_candidate_source"
+}

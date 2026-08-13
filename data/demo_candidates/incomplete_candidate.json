@@ -1,0 +1,9 @@
+{
+  "material_id": "Demo-Incomplete-MOF",
+  "co2_uptake_mmol_g": 2.5,
+  "co2_n2_selectivity": 18.0,
+  "temperature_k": 298,
+  "co2_pressure_bar": 0.2,
+  "n2_pressure_bar": 1.0,
+  "evidence_type": "user_supplied_candidate_claim"
+}

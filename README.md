@@ -93,6 +93,34 @@ python -m pytest
 python scripts/check_sources.py
 ```
 
+## Run The Backend Demo
+
+After running the local CRAFTED slice export, run:
+
+```bash
+python scripts/run_virtual_lab_demo.py
+```
+
+The demo evaluates three synthetic unfamiliar MOF candidates:
+
+- a consistent candidate whose supplied metrics roughly match descriptor-based expectations;
+- a suspicious candidate whose supplied metrics are stronger than the descriptor model expects;
+- an incomplete candidate with missing descriptors/metrics.
+
+Outputs are written to:
+
+```text
+reports/virtual_lab_demo/
+```
+
+Open `reports/virtual_lab_demo/demo_index.md` for the summary. The demo labels
+evidence types explicitly:
+
+- CRAFTED reference adsorption records are GCMC-simulated outputs;
+- demo candidate metrics are user-supplied synthetic claims;
+- descriptor-predicted properties are ML estimates;
+- virtual-lab decisions are triage recommendations, not proof of experimental viability.
+
 ## Data Policy
 
 Raw datasets are not committed by default. Every approved dataset should have source metadata, licence notes, retrieval date, and a clear statement of whether it is experimental, computational, predicted, or mixed.
@@ -102,6 +130,8 @@ The deterministic staging layer for CSV and structured text is documented in [`d
 ## Current Status
 
 Backend-first screening engine with real local CRAFTED parsing, controlled-slice
-ranking, provenance logging, weak ML triage, and first-pass similarity triage
-for unfamiliar candidates with known descriptors. Automated source monitoring
-and a fuller virtual-lab interface remain later work.
+ranking, provenance logging, weak ML triage, descriptor-based property
+prediction, prediction uncertainty intervals, supplied-vs-predicted gap checks,
+and a final virtual-lab assessment for unfamiliar candidates with known
+descriptors. Automated source monitoring and a fuller web interface remain
+later work.

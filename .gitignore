@@ -21,6 +21,7 @@ reports/crafted_real_slice_export*/
 reports/crafted_ml_triage*/
 reports/unfamiliar_candidate_triage*/
 reports/unfamiliar_candidate_property_prediction*/
+reports/virtual_lab_demo*/
 *.zip
 *.pkl
 *.joblib

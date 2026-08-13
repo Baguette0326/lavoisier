@@ -346,6 +346,33 @@ This is still a baseline estimate, not a replacement for GCMC simulation,
 experimental measurement, or process modeling. Its job is to decide whether an
 unfamiliar candidate is worth deeper computational or lab work.
 
+## Virtual Lab Demo Command
+
+Run the backend demo with:
+
+```bash
+python scripts/run_virtual_lab_demo.py
+```
+
+The command uses synthetic candidate examples from:
+
+```text
+data/demo_candidates/
+```
+
+It writes an ignored demo packet:
+
+```text
+reports/virtual_lab_demo/demo_summary.csv
+reports/virtual_lab_demo/demo_index.md
+reports/virtual_lab_demo/<candidate>/candidate_review_report.md
+reports/virtual_lab_demo/<candidate>/candidate_assessment_summary.json
+```
+
+The demo candidates are intentionally not research claims. They are examples
+for explaining the backend workflow: consistent candidate, suspicious
+supplied-vs-predicted gap, and incomplete candidate.
+
 ## Next Backend Milestones
 
 1. Complete `docs/crafted_approval_checklist.md` before downloading or parsing
