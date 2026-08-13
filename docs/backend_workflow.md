@@ -346,6 +346,36 @@ This is still a baseline estimate, not a replacement for GCMC simulation,
 experimental measurement, or process modeling. Its job is to decide whether an
 unfamiliar candidate is worth deeper computational or lab work.
 
+## CoRE Descriptor Feature-Set Evaluation
+
+CoRE MOF 2014 descriptors are now joined into the real CRAFTED slice, but they
+should not automatically be treated as better ML features. Evaluate them with:
+
+```bash
+python scripts/evaluate_descriptor_feature_sets.py \
+  --reference reports/crafted_real_slice_export/ranked_records.csv \
+  --output-dir reports/descriptor_feature_set_evaluation
+```
+
+This compares:
+
+- `crafted_geometric`: CRAFTED geometric descriptors plus controlled-condition
+  fields;
+- `crafted_geometric_plus_core2014`: the same baseline plus numeric CoRE CIF
+  descriptors such as cell lengths, angles, volume, formula units, and space
+  group number.
+
+Current held-out result on the controlled CRAFTED slice:
+
+```text
+co2_uptake_mmol_g: CoRE features improved MAE slightly
+co2_n2_selectivity: CoRE features worsened MAE
+heat_of_adsorption_kj_mol: CoRE features improved MAE slightly
+```
+
+Interpretation: CoRE descriptors may help some targets, but not all. Use them
+selectively and keep the baseline comparison report with any model decision.
+
 ## Virtual Lab Demo Command
 
 Run the backend demo with:

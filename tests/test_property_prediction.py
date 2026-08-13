@@ -5,11 +5,16 @@ from pathlib import Path
 
 import pandas as pd
 
-from carbonsense.property_prediction import PREDICTION_TARGETS, predict_candidate_properties
+from carbonsense.property_prediction import (
+    PREDICTION_TARGETS,
+    evaluate_property_prediction_feature_sets,
+    predict_candidate_properties,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = PROJECT_ROOT / "scripts" / "predict_unfamiliar_candidate_properties.py"
+FEATURE_SET_SCRIPT = PROJECT_ROOT / "scripts" / "evaluate_descriptor_feature_sets.py"
 
 
 def _reference_frame(record_count: int = 30) -> pd.DataFrame:
@@ -30,6 +35,15 @@ def _reference_frame(record_count: int = 30) -> pd.DataFrame:
                 "pore_limiting_diameter_a": pore_limit,
                 "largest_cavity_diameter_a": cavity,
                 "void_fraction": void_fraction,
+                "core_cell_length_a": 10 + index * 0.1,
+                "core_cell_length_b": 11 + index * 0.1,
+                "core_cell_length_c": 12 + index * 0.1,
+                "core_cell_angle_alpha": 90,
+                "core_cell_angle_beta": 90,
+                "core_cell_angle_gamma": 90,
+                "core_cell_volume": 1000 + index * 25,
+                "core_cell_formula_units_z": 2,
+                "core_int_tables_number": 1,
                 "temperature_k": 298,
                 "co2_pressure_bar": 0.2,
                 "n2_pressure_bar": 1.0,
@@ -135,3 +149,45 @@ def test_property_prediction_script_writes_prediction_packet(tmp_path: Path) -> 
     assert "# Candidate Property Prediction Report" in report
     assert "Approx P10" in report
     assert "## Supplied Vs Descriptor-Predicted Metrics" in report
+
+
+def test_evaluate_property_prediction_feature_sets_compares_core_enrichment() -> None:
+    result = evaluate_property_prediction_feature_sets(_reference_frame(40))
+
+    assert set(result.target_results) == set(PREDICTION_TARGETS)
+    uptake = result.target_results["co2_uptake_mmol_g"]
+    assert uptake["crafted_geometric"]["status"] == "evaluated"
+    assert uptake["crafted_geometric_plus_core2014"]["status"] == "evaluated"
+    assert "core_cell_volume" in uptake["crafted_geometric_plus_core2014"]["feature_columns"]
+    assert "core_cell_volume" not in uptake["crafted_geometric"]["feature_columns"]
+    comparison = result.comparison_summary["target_comparisons"]["co2_uptake_mmol_g"]
+    assert comparison["baseline_test_mae"] is not None
+    assert comparison["candidate_test_mae"] is not None
+
+
+def test_evaluate_descriptor_feature_sets_script_writes_reports(tmp_path: Path) -> None:
+    reference_path = tmp_path / "ranked_records.csv"
+    output_dir = tmp_path / "feature_set_evaluation"
+    _reference_frame(40).to_csv(reference_path, index=False)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(FEATURE_SET_SCRIPT),
+            "--reference",
+            str(reference_path),
+            "--output-dir",
+            str(output_dir),
+        ],
+        cwd=PROJECT_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "Descriptor feature-set evaluation complete." in completed.stdout
+    payload = json.loads((output_dir / "descriptor_feature_set_evaluation.json").read_text(encoding="utf-8"))
+    report = (output_dir / "descriptor_feature_set_evaluation.md").read_text(encoding="utf-8")
+    assert "comparison_summary" in payload
+    assert "crafted_geometric_plus_core2014" == payload["comparison_summary"]["candidate_feature_set"]
+    assert "# Descriptor Feature Set Evaluation" in report

@@ -63,6 +63,12 @@ Deliverables:
 Variant-aware MOF identity and comparability is a candidate later roadmap item,
 not current MVP scope. See `docs/variant_aware_mof_screening.md`.
 
+Condition-transfer prediction is also future scope, not current MVP scope. The
+future question is: given one MOF tested or simulated at one temperature/pressure
+slice, how might it perform at another slice? A defensible version should first
+use available isotherm curves or interpolation, then only use ML as a
+condition-transfer estimate with uncertainty and clear limits.
+
 ## End-Of-Summer Demo
 
 Demo script:

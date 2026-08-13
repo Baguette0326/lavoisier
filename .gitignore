@@ -26,6 +26,7 @@ reports/external_validation*/
 reports/core_mof_2014_join_inspection*/
 reports/core_mof_2014_enrichment*/
 reports/qmof_join_inspection*/
+reports/descriptor_feature_set_evaluation*/
 *.zip
 *.pkl
 *.joblib

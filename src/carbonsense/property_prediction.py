@@ -29,6 +29,18 @@ STRUCTURAL_DESCRIPTOR_FEATURES = (
     "void_fraction",
 )
 
+CORE2014_DESCRIPTOR_FEATURES = (
+    "core_cell_length_a",
+    "core_cell_length_b",
+    "core_cell_length_c",
+    "core_cell_angle_alpha",
+    "core_cell_angle_beta",
+    "core_cell_angle_gamma",
+    "core_cell_volume",
+    "core_cell_formula_units_z",
+    "core_int_tables_number",
+)
+
 CONDITION_FEATURES = (
     "temperature_k",
     "co2_pressure_bar",
@@ -55,6 +67,14 @@ class PropertyPredictionResult:
     prediction_summary: dict[str, object]
 
 
+@dataclass(frozen=True)
+class FeatureSetEvaluationResult:
+    """Held-out evaluation comparing descriptor feature sets."""
+
+    target_results: dict[str, dict[str, dict[str, object]]]
+    comparison_summary: dict[str, object]
+
+
 def _numeric_frame(frame: pd.DataFrame, columns: Sequence[str]) -> pd.DataFrame:
     return frame.loc[:, list(columns)].apply(pd.to_numeric, errors="coerce")
 
@@ -70,6 +90,10 @@ def _available_features(reference_frame: pd.DataFrame) -> list[str]:
     descriptor_features = [column for column in STRUCTURAL_DESCRIPTOR_FEATURES if column in reference_frame.columns]
     condition_features = [column for column in CONDITION_FEATURES if column in reference_frame.columns]
     return descriptor_features + condition_features
+
+
+def _available_named_features(reference_frame: pd.DataFrame, feature_columns: Sequence[str]) -> list[str]:
+    return [column for column in feature_columns if column in reference_frame.columns]
 
 
 def _supplied_descriptor_count(candidate: Mapping[str, object]) -> int:
@@ -307,3 +331,127 @@ def predict_candidate_properties(
             "official_use_policy": "Descriptor predictions are baseline estimates, not simulation or laboratory validation.",
         },
     )
+
+
+def evaluate_property_prediction_feature_sets(
+    reference_frame: pd.DataFrame,
+    *,
+    targets: Sequence[str] = PREDICTION_TARGETS,
+    feature_sets: Mapping[str, Sequence[str]] | None = None,
+) -> FeatureSetEvaluationResult:
+    """Compare held-out prediction quality for descriptor feature sets."""
+    active_feature_sets = feature_sets or {
+        "crafted_geometric": (*STRUCTURAL_DESCRIPTOR_FEATURES, *CONDITION_FEATURES),
+        "crafted_geometric_plus_core2014": (
+            *STRUCTURAL_DESCRIPTOR_FEATURES,
+            *CORE2014_DESCRIPTOR_FEATURES,
+            *CONDITION_FEATURES,
+        ),
+    }
+    target_results: dict[str, dict[str, dict[str, object]]] = {}
+
+    for target in targets:
+        target_results[target] = {}
+        if target not in reference_frame.columns:
+            for feature_set_name in active_feature_sets:
+                target_results[target][feature_set_name] = {
+                    "status": "skipped_missing_target_column",
+                    "feature_columns": [],
+                    "training_records": 0,
+                    "test_records": 0,
+                    "test_mae": None,
+                    "test_r2": None,
+                }
+            continue
+
+        target_values = pd.to_numeric(reference_frame[target], errors="coerce")
+        for feature_set_name, raw_feature_columns in active_feature_sets.items():
+            feature_columns = _available_named_features(reference_frame, raw_feature_columns)
+            if not feature_columns:
+                target_results[target][feature_set_name] = {
+                    "status": "skipped_no_available_features",
+                    "feature_columns": [],
+                    "training_records": 0,
+                    "test_records": 0,
+                    "test_mae": None,
+                    "test_r2": None,
+                }
+                continue
+
+            feature_frame = _numeric_frame(reference_frame, feature_columns)
+            usable_rows = feature_frame.notna().any(axis=1) & target_values.notna()
+            usable_count = int(usable_rows.sum())
+            if usable_count < HOLDOUT_TARGET_RECORDS:
+                target_results[target][feature_set_name] = {
+                    "status": "skipped_insufficient_holdout_records",
+                    "feature_columns": feature_columns,
+                    "training_records": usable_count,
+                    "test_records": 0,
+                    "test_mae": None,
+                    "test_r2": None,
+                    "minimum_required_records": HOLDOUT_TARGET_RECORDS,
+                }
+                continue
+
+            x = feature_frame.loc[usable_rows, feature_columns]
+            y = target_values.loc[usable_rows]
+            x_train, x_test, y_train, y_test = train_test_split(
+                x,
+                y,
+                test_size=0.2,
+                random_state=42,
+            )
+            model = _build_regressor()
+            model.fit(x_train, y_train)
+            predictions = model.predict(x_test)
+            target_results[target][feature_set_name] = {
+                "status": "evaluated",
+                "feature_columns": feature_columns,
+                "training_records": int(len(x_train)),
+                "test_records": int(len(x_test)),
+                "test_mae": round(float(mean_absolute_error(y_test, predictions)), 4),
+                "test_r2": round(float(r2_score(y_test, predictions)), 4) if len(x_test) >= 2 else None,
+            }
+
+    comparison_summary: dict[str, object] = {
+        "method": "RandomForestRegressor held-out feature-set comparison",
+        "baseline_feature_set": "crafted_geometric",
+        "candidate_feature_set": "crafted_geometric_plus_core2014",
+        "target_comparisons": {},
+        "use_policy": (
+            "Use CoRE descriptors in the predictor only when held-out metrics improve or remain comparable "
+            "and the added provenance/coverage tradeoff is acceptable."
+        ),
+    }
+    target_comparisons = comparison_summary["target_comparisons"]
+    assert isinstance(target_comparisons, dict)
+    for target, results in target_results.items():
+        baseline = results.get("crafted_geometric", {})
+        candidate = results.get("crafted_geometric_plus_core2014", {})
+        baseline_mae = baseline.get("test_mae")
+        candidate_mae = candidate.get("test_mae")
+        if baseline_mae is None or candidate_mae is None:
+            target_comparisons[target] = {
+                "status": "not_comparable",
+                "baseline_test_mae": baseline_mae,
+                "candidate_test_mae": candidate_mae,
+                "mae_delta_candidate_minus_baseline": None,
+            }
+            continue
+        mae_delta = round(float(candidate_mae) - float(baseline_mae), 4)
+        if mae_delta < 0:
+            status = "candidate_feature_set_improved_mae"
+        elif mae_delta > 0:
+            status = "candidate_feature_set_worse_mae"
+        else:
+            status = "candidate_feature_set_tied_mae"
+        target_comparisons[target] = {
+            "status": status,
+            "baseline_test_mae": baseline_mae,
+            "candidate_test_mae": candidate_mae,
+            "mae_delta_candidate_minus_baseline": mae_delta,
+            "baseline_test_r2": baseline.get("test_r2"),
+            "candidate_test_r2": candidate.get("test_r2"),
+        }
+
+    return FeatureSetEvaluationResult(target_results=target_results, comparison_summary=comparison_summary)
