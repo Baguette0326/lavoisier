@@ -22,6 +22,7 @@ reports/crafted_ml_triage*/
 reports/unfamiliar_candidate_triage*/
 reports/unfamiliar_candidate_property_prediction*/
 reports/virtual_lab_demo*/
+reports/external_validation*/
 *.zip
 *.pkl
 *.joblib

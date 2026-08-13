@@ -1,0 +1,20 @@
+{
+  "material_id": "UiO-66-NH2-external-literature",
+  "material_family": "UiO-66",
+  "candidate_role": "external_validation_case",
+  "co2_uptake_mmol_g": 2.59,
+  "co2_n2_selectivity": 22.83,
+  "heat_of_adsorption_kj_mol": 24.2,
+  "surface_area_m2_g": 822.0,
+  "pore_volume_cm3_g": 0.236,
+  "temperature_k": 298,
+  "co2_pressure_bar": 1.0,
+  "n2_pressure_bar": 1.0,
+  "force_field": "not_applicable_experimental",
+  "charge_method": "not_applicable_experimental",
+  "evidence_type": "experimental_literature",
+  "simulation_method": "experimental_adsorption_isotherm",
+  "source_reference": "Cao et al., Materials 2018, UiO-66-NH2/GO Composite: Synthesis, Characterization and CO2 Adsorption Performance",
+  "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5951473/",
+  "source_notes": "UiO-66-NH2 values are independently reported experimental/literature values. CO2 uptake is reported at 298 K and 1 bar; CO2/N2 selectivity is from initial-slope selectivity at 298 K; Qst is reported average isosteric heat. This is intentionally outside the exact CRAFTED GCMC 0.2 bar CO2 slice."
+}
