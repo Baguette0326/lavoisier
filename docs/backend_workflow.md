@@ -378,6 +378,8 @@ heat_of_adsorption_kj_mol: CoRE features improved MAE slightly
 
 Interpretation: CoRE descriptors may help some targets, but not all. Use them
 selectively and keep the baseline comparison report with any model decision.
+The current feature/database policy is recorded in
+`docs/feature_source_policy.md`.
 
 ## Virtual Lab Demo Command
 
