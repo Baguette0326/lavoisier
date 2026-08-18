@@ -53,6 +53,27 @@ PREDICTION_TARGETS = (
     "heat_of_adsorption_kj_mol",
 )
 
+PREDICTION_FEATURE_SETS = {
+    "crafted_geometric": (*STRUCTURAL_DESCRIPTOR_FEATURES, *CONDITION_FEATURES),
+    "crafted_geometric_plus_core2014": (
+        *STRUCTURAL_DESCRIPTOR_FEATURES,
+        *CORE2014_DESCRIPTOR_FEATURES,
+        *CONDITION_FEATURES,
+    ),
+}
+
+TARGET_FEATURE_SET_POLICY = {
+    "co2_uptake_mmol_g": "crafted_geometric_plus_core2014",
+    "co2_n2_selectivity": "crafted_geometric",
+    "heat_of_adsorption_kj_mol": "crafted_geometric_plus_core2014",
+}
+
+TARGET_FEATURE_SET_RATIONALE = {
+    "co2_uptake_mmol_g": "CoRE descriptors stably improved repeated-holdout MAE for CO2 uptake.",
+    "co2_n2_selectivity": "CoRE descriptors worsened repeated-holdout MAE for CO2/N2 selectivity.",
+    "heat_of_adsorption_kj_mol": "CoRE descriptors stably improved repeated-holdout MAE for heat of adsorption.",
+}
+
 MINIMUM_TARGET_RECORDS = 5
 HOLDOUT_TARGET_RECORDS = 20
 DEFAULT_EVALUATION_RANDOM_SEEDS = (11, 23, 42, 71, 101)
@@ -91,6 +112,19 @@ def _available_features(reference_frame: pd.DataFrame) -> list[str]:
     descriptor_features = [column for column in STRUCTURAL_DESCRIPTOR_FEATURES if column in reference_frame.columns]
     condition_features = [column for column in CONDITION_FEATURES if column in reference_frame.columns]
     return descriptor_features + condition_features
+
+
+def _available_policy_features(reference_frame: pd.DataFrame) -> list[str]:
+    columns: list[str] = []
+    for feature_set in PREDICTION_FEATURE_SETS.values():
+        for column in feature_set:
+            if column in reference_frame.columns and column not in columns:
+                columns.append(column)
+    return columns
+
+
+def _feature_set_for_target(target: str) -> str:
+    return TARGET_FEATURE_SET_POLICY.get(target, "crafted_geometric")
 
 
 def _available_named_features(reference_frame: pd.DataFrame, feature_columns: Sequence[str]) -> list[str]:
@@ -210,7 +244,7 @@ def predict_candidate_properties(
     targets: Sequence[str] = PREDICTION_TARGETS,
 ) -> PropertyPredictionResult:
     """Predict adsorption targets from descriptors for one unfamiliar candidate."""
-    feature_columns = _available_features(reference_frame)
+    feature_columns = _available_policy_features(reference_frame)
     descriptor_columns = [column for column in STRUCTURAL_DESCRIPTOR_FEATURES if column in reference_frame.columns]
     supplied_descriptor_count = _supplied_descriptor_count(candidate)
     warnings: list[str] = []
@@ -262,14 +296,22 @@ def predict_candidate_properties(
 
     predictions: dict[str, float | None] = {}
     target_summaries: dict[str, dict[str, object]] = {}
-    feature_frame = _numeric_frame(reference_frame, feature_columns)
-    has_any_feature = feature_frame.notna().any(axis=1)
 
     for target in targets:
+        feature_set_name = _feature_set_for_target(target)
+        target_feature_columns = _available_named_features(
+            reference_frame,
+            PREDICTION_FEATURE_SETS.get(feature_set_name, PREDICTION_FEATURE_SETS["crafted_geometric"]),
+        )
+        feature_frame = _numeric_frame(reference_frame, target_feature_columns)
+        has_any_feature = feature_frame.notna().any(axis=1) if target_feature_columns else pd.Series(False, index=reference_frame.index)
         if target not in reference_frame.columns:
             predictions[target] = None
             target_summaries[target] = {
                 "status": "skipped_missing_target_column",
+                "feature_set": feature_set_name,
+                "feature_set_rationale": TARGET_FEATURE_SET_RATIONALE.get(target),
+                "feature_columns": target_feature_columns,
                 "training_records": 0,
             }
             continue
@@ -281,12 +323,15 @@ def predict_candidate_properties(
             predictions[target] = None
             target_summaries[target] = {
                 "status": "skipped_insufficient_training_records",
+                "feature_set": feature_set_name,
+                "feature_set_rationale": TARGET_FEATURE_SET_RATIONALE.get(target),
+                "feature_columns": target_feature_columns,
                 "training_records": training_records,
                 "minimum_required_records": MINIMUM_TARGET_RECORDS,
             }
             continue
 
-        x = feature_frame.loc[usable_rows, feature_columns]
+        x = feature_frame.loc[usable_rows, target_feature_columns]
         y = target_values.loc[usable_rows]
 
         holdout_summary: dict[str, float | int | None] = {
@@ -312,12 +357,15 @@ def predict_candidate_properties(
 
         final_model = _build_regressor()
         final_model.fit(x, y)
-        candidate_feature_frame = candidate_features.loc[:, feature_columns]
+        candidate_feature_frame = _candidate_frame(candidate, target_feature_columns)
         prediction = float(final_model.predict(candidate_feature_frame)[0])
         interval = _forest_prediction_interval(final_model, candidate_feature_frame)
         predictions[target] = round(prediction, 4)
         target_summaries[target] = {
             "status": "predicted",
+            "feature_set": feature_set_name,
+            "feature_set_rationale": TARGET_FEATURE_SET_RATIONALE.get(target),
+            "feature_columns": target_feature_columns,
             "training_records": training_records,
             "prediction_interval_method": "random_forest_tree_prediction_p10_p90",
             **interval,
@@ -330,11 +378,17 @@ def predict_candidate_properties(
     return PropertyPredictionResult(
         predicted_properties=predictions,
         prediction_summary={
-            "method": "RandomForestRegressor descriptor baseline",
+            "method": "RandomForestRegressor target-specific descriptor baseline",
             "target_source": "reference table adsorption metrics",
-            "feature_policy": "structural descriptors plus controlled-condition fields; target adsorption metrics excluded",
+            "feature_policy": (
+                "target-specific feature sets from docs/feature_source_policy.md; "
+                "target adsorption metrics excluded"
+            ),
             "feature_columns": feature_columns,
+            "target_feature_policy": TARGET_FEATURE_SET_POLICY,
+            "target_feature_rationale": TARGET_FEATURE_SET_RATIONALE,
             "descriptor_features": list(STRUCTURAL_DESCRIPTOR_FEATURES),
+            "core2014_descriptor_features": [column for column in CORE2014_DESCRIPTOR_FEATURES if column in reference_frame.columns],
             "condition_features": [column for column in CONDITION_FEATURES if column in feature_columns],
             "candidate_descriptor_count": supplied_descriptor_count,
             "candidate_descriptor_required_count": len(STRUCTURAL_DESCRIPTOR_FEATURES),
@@ -355,12 +409,8 @@ def evaluate_property_prediction_feature_sets(
 ) -> FeatureSetEvaluationResult:
     """Compare repeated held-out prediction quality for descriptor feature sets."""
     active_feature_sets = feature_sets or {
-        "crafted_geometric": (*STRUCTURAL_DESCRIPTOR_FEATURES, *CONDITION_FEATURES),
-        "crafted_geometric_plus_core2014": (
-            *STRUCTURAL_DESCRIPTOR_FEATURES,
-            *CORE2014_DESCRIPTOR_FEATURES,
-            *CONDITION_FEATURES,
-        ),
+        "crafted_geometric": PREDICTION_FEATURE_SETS["crafted_geometric"],
+        "crafted_geometric_plus_core2014": PREDICTION_FEATURE_SETS["crafted_geometric_plus_core2014"],
     }
     target_results: dict[str, dict[str, dict[str, object]]] = {}
 

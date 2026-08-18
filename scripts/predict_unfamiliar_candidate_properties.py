@@ -81,15 +81,16 @@ def build_markdown_report(
         "",
         "## Predicted Properties",
         "",
-        "| Target | Predicted value | Approx P10 | Approx P90 | Training records | Test MAE | Test R2 |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| Target | Feature set | Predicted value | Approx P10 | Approx P90 | Training records | Test MAE | Test R2 |",
+        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     target_summaries = summary.get("target_summaries", {})
     for target, value in predicted_properties.items():
         detail = target_summaries.get(target, {}) if isinstance(target_summaries, dict) else {}
         lines.append(
-            "| {target} | {value} | {p10} | {p90} | {training_records} | {test_mae} | {test_r2} |".format(
+            "| {target} | {feature_set} | {value} | {p10} | {p90} | {training_records} | {test_mae} | {test_r2} |".format(
                 target=target,
+                feature_set=detail.get("feature_set", ""),
                 value=_format_value(value),
                 p10=_format_value(detail.get("approx_p10")),
                 p90=_format_value(detail.get("approx_p90")),
@@ -111,6 +112,26 @@ def build_markdown_report(
             "- Feature columns: `" + "`, `".join(summary.get("feature_columns", [])) + "`",
             f"- Candidate supplied descriptors: `{summary['candidate_descriptor_count']}` / `{summary['candidate_descriptor_required_count']}`",
             "",
+            "## Target Feature Policy",
+            "",
+        ]
+    )
+    for target, detail in target_summaries.items():
+        if not isinstance(detail, dict):
+            continue
+        feature_columns = detail.get("feature_columns", [])
+        lines.extend(
+            [
+                f"### `{target}`",
+                "",
+                f"- Feature set: `{detail.get('feature_set', '')}`",
+                f"- Rationale: {detail.get('feature_set_rationale', '')}",
+                "- Feature columns: `" + "`, `".join(feature_columns) + "`",
+                "",
+            ]
+        )
+    lines.extend(
+        [
             "## Warnings And Limitations",
             "",
         ]

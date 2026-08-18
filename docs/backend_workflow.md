@@ -294,8 +294,17 @@ The current baseline uses a `RandomForestRegressor` for each target:
 - `co2_n2_selectivity`;
 - `heat_of_adsorption_kj_mol`.
 
-The feature set is deliberately limited to structural descriptors and
-controlled-condition fields:
+The feature sets are deliberately limited to structural descriptors and
+controlled-condition fields. The current predictor uses target-specific feature
+sets from `docs/feature_source_policy.md`:
+
+- `co2_uptake_mmol_g`: CRAFTED geometric descriptors, CoRE numeric descriptors,
+  and condition fields;
+- `co2_n2_selectivity`: CRAFTED geometric descriptors and condition fields only;
+- `heat_of_adsorption_kj_mol`: CRAFTED geometric descriptors, CoRE numeric
+  descriptors, and condition fields.
+
+The base CRAFTED geometric fields are:
 
 - surface area;
 - pore volume;
