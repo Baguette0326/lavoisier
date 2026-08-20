@@ -43,6 +43,66 @@ PROVENANCE_COLUMNS = [
 ]
 
 
+def apply_demo_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        .main .block-container {
+            padding-top: 2rem;
+            padding-bottom: 3rem;
+        }
+        [data-testid="stMetricValue"] {
+            font-variant-numeric: tabular-nums;
+        }
+        .lavoisier-hero {
+            border-radius: 14px;
+            padding: 1.15rem 1.25rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, rgba(41, 98, 91, 0.14), rgba(58, 129, 191, 0.10));
+            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+        }
+        .lavoisier-hero h1 {
+            margin: 0 0 0.25rem 0;
+            letter-spacing: 0;
+        }
+        .lavoisier-hero p {
+            margin: 0;
+            max-width: 920px;
+        }
+        .lavoisier-badge {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 0.18rem 0.55rem;
+            margin: 0 0.35rem 0.35rem 0;
+            background: rgba(0, 0, 0, 0.06);
+            font-size: 0.82rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_demo_header() -> None:
+    st.markdown(
+        """
+        <div class="lavoisier-hero">
+          <h1>Lavoisier</h1>
+          <p>
+            A local decision-support prototype for reviewing carbon-capture MOF screening records.
+            It ranks one controlled CRAFTED CO2/N2 slice, attaches CoRE structural provenance,
+            and uses target-specific ML estimates for candidate triage without claiming experimental validation.
+          </p>
+        </div>
+        <span class="lavoisier-badge">CRAFTED GCMC slice</span>
+        <span class="lavoisier-badge">CoRE MOF provenance</span>
+        <span class="lavoisier-badge">Target-specific ML</span>
+        <span class="lavoisier-badge">Reviewable exports</span>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def read_csv(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
@@ -130,6 +190,15 @@ def render_ranked_screening(ranked: pd.DataFrame) -> None:
     csv_bytes = view.to_csv(index=False).encode("utf-8")
     st.download_button("Export visible ranked records", csv_bytes, "lavoisier_ranked_visible.csv", "text/csv")
 
+    with st.expander("How to explain this tab in a demo"):
+        st.markdown(
+            """
+            - The comparison is intentionally restricted to one controlled CRAFTED slice.
+            - The ranking is deterministic and reviewable, not an autonomous material-discovery claim.
+            - CoRE fields show whether each performance record has matched structural provenance.
+            """
+        )
+
 
 def render_virtual_lab() -> None:
     st.header("Candidate Virtual Lab")
@@ -182,6 +251,15 @@ def render_virtual_lab() -> None:
                         }
                     )
             st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+
+    with st.expander("How to explain this tab in a demo"):
+        st.markdown(
+            """
+            - Candidate metrics are synthetic user-supplied claims for demo purposes.
+            - The ML model estimates expected properties from descriptors, then flags assumption gaps.
+            - Feature sets are target-specific because CoRE descriptors helped uptake and heat, but hurt selectivity.
+            """
+        )
 
 
 def render_provenance(ranked: pd.DataFrame) -> None:
@@ -238,11 +316,20 @@ def render_provenance(ranked: pd.DataFrame) -> None:
         if "core_match_status" in ranked:
             st.bar_chart(ranked["core_match_status"].value_counts())
 
+    with st.expander("Demo close-out"):
+        st.markdown(
+            """
+            Lavoisier is useful because carbon-capture material records are only meaningful with their
+            conditions, evidence type, and source lineage attached. The app helps produce a shortlist
+            that a human can inspect instead of treating high adsorption numbers as universally comparable.
+            """
+        )
+
 
 def main() -> None:
     st.set_page_config(page_title="Lavoisier", page_icon="L", layout="wide")
-    st.title("Lavoisier")
-    st.caption("Human-in-the-loop MOF carbon-capture screening with provenance-aware ML triage.")
+    apply_demo_styles()
+    render_demo_header()
 
     if not require_output(RANKED_RECORDS, "python scripts/run_crafted_real_slice.py"):
         return

@@ -97,6 +97,9 @@ The local recruiter-demo app has three tabs:
   receipt, feature-source policy, and explicit limits on what the model can
   claim.
 
+For a short portfolio walkthrough, use
+[`docs/portfolio_demo_script.md`](docs/portfolio_demo_script.md).
+
 ## Run Checks
 
 ```bash
