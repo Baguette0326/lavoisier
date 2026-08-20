@@ -1,192 +1,261 @@
-"""Lavoisier Streamlit app."""
+"""Lavoisier recruiter-demo Streamlit app."""
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
-import sys
 
 import pandas as pd
 import streamlit as st
 
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
+RANKED_RECORDS = PROJECT_ROOT / "reports" / "crafted_real_slice_export" / "ranked_records.csv"
+SCREENING_METADATA = PROJECT_ROOT / "reports" / "crafted_real_slice_export" / "screening_metadata.json"
+TRANSFORMATION_LOG = PROJECT_ROOT / "reports" / "crafted_real_slice_export" / "transformation_log.json"
+VIRTUAL_LAB_SUMMARY = PROJECT_ROOT / "reports" / "virtual_lab_demo" / "demo_summary.csv"
+FEATURE_SET_EVALUATION = (
+    PROJECT_ROOT / "reports" / "descriptor_feature_set_evaluation" / "descriptor_feature_set_evaluation.json"
+)
+FEATURE_SOURCE_POLICY = PROJECT_ROOT / "docs" / "feature_source_policy.md"
 
-from carbonsense.flags import build_tradeoff_flags
-from carbonsense.ranking import DEFAULT_WEIGHTS, rank_materials
-from carbonsense.schema import validate_material_table
-
-
-SAMPLE_DATA = PROJECT_ROOT / "data" / "sample_materials.csv"
-DISPLAY_COLUMNS = [
-    "rank",
+RANKED_COLUMNS = [
     "material_id",
     "screening_score",
-    "evidence_type",
-    "source",
-    "capture_context",
     "co2_uptake_mmol_g",
     "co2_n2_selectivity",
     "heat_of_adsorption_kj_mol",
+    "surface_area_m2_g",
+    "pore_volume_cm3_g",
+    "density_g_cm3",
+    "descriptor_match_status",
+    "core_match_status",
     "review_flags",
 ]
 
+PROVENANCE_COLUMNS = [
+    "material_id",
+    "core_match_status",
+    "core_source_file",
+    "core_formula_sum",
+    "core_cell_volume",
+    "core_file_checksum_sha256",
+]
 
-def load_frame(source_choice: str, uploaded: object | None) -> pd.DataFrame | None:
-    """Load the selected local demo or uploaded CSV."""
-    if source_choice == "Use demo data":
-        return pd.read_csv(SAMPLE_DATA)
-    if uploaded is not None:
-        return pd.read_csv(uploaded)
-    return None
+
+def read_csv(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
 
 
-def explain_top_candidate(ranked: pd.DataFrame, weights: dict[str, float]) -> str:
-    """Summarize the strongest weighted score components for the top record."""
+def read_json(path: Path) -> dict[str, object]:
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def read_text(path: Path) -> str:
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8")
+
+
+def require_output(path: Path, command: str) -> bool:
+    if path.exists():
+        return True
+    st.error(f"Missing local output: `{path.relative_to(PROJECT_ROOT)}`")
+    st.code(command, language="bash")
+    return False
+
+
+def format_metric(value: object, digits: int = 3) -> str:
+    if value is None or pd.isna(value):
+        return "n/a"
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return f"{value:.{digits}f}"
+    return str(value)
+
+
+def display_dataframe(frame: pd.DataFrame, columns: list[str]) -> None:
+    visible = [column for column in columns if column in frame.columns]
+    st.dataframe(frame[visible], hide_index=True, width="stretch")
+
+
+def render_ranked_screening(ranked: pd.DataFrame) -> None:
+    st.header("Ranked MOF Screening")
+    st.caption("Controlled CRAFTED MOF/GCMC slice with CoRE provenance enrichment.")
+
     if ranked.empty:
-        return "No candidate is available to explain."
-    active_total = sum(weight for feature, weight in weights.items() if feature in ranked.columns)
-    if active_total <= 0:
-        return "No scoring criteria have a positive weight."
+        st.info("No ranked records are available yet.")
+        return
+
     top = ranked.iloc[0]
-    contributions: list[tuple[str, float]] = []
-    for feature, weight in weights.items():
-        score_column = f"{feature}_score"
-        if score_column in ranked.columns:
-            contributions.append((feature, float(top[score_column]) * weight / active_total))
-    strongest = sorted(contributions, key=lambda item: item[1], reverse=True)[:2]
-    drivers = ", ".join(feature.replace("_", " ") for feature, _ in strongest)
-    return f"{top['material_id']} ranks first. Its strongest weighted drivers are {drivers}."
+    core_matches = int(ranked["core_match_status"].eq("matched_core2014").sum()) if "core_match_status" in ranked else 0
+    flagged = int(ranked["review_flags"].fillna("").astype(str).str.strip().ne("").sum()) if "review_flags" in ranked else 0
+
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("Ranked records", f"{len(ranked):,}")
+    metric_cols[1].metric("Top score", format_metric(float(top["screening_score"])))
+    metric_cols[2].metric("CoRE matched", f"{core_matches:,}")
+    metric_cols[3].metric("Review flags", f"{flagged:,}")
+
+    controls = st.columns([1, 1, 2])
+    top_n = controls[0].slider("Rows", 5, min(100, len(ranked)), 20, step=5)
+    core_filter = controls[1].selectbox("CoRE status", ["all", "matched_core2014", "missing_core2014"])
+    search = controls[2].text_input("Material search", placeholder="e.g. PARHAS")
+
+    view = ranked.copy()
+    if core_filter != "all" and "core_match_status" in view:
+        view = view[view["core_match_status"].eq(core_filter)]
+    if search:
+        view = view[view["material_id"].astype(str).str.contains(search, case=False, na=False)]
+    view = view.head(top_n)
+
+    display_dataframe(view, RANKED_COLUMNS)
+
+    if not view.empty:
+        st.subheader("Top Candidate Snapshot")
+        selected_id = st.selectbox("Inspect material", view["material_id"].astype(str).tolist())
+        selected = ranked[ranked["material_id"].astype(str).eq(selected_id)].iloc[0]
+        detail_cols = st.columns(3)
+        detail_cols[0].metric("CO2 uptake (mmol/g)", format_metric(selected.get("co2_uptake_mmol_g")))
+        detail_cols[1].metric("CO2/N2 selectivity", format_metric(selected.get("co2_n2_selectivity")))
+        detail_cols[2].metric("Heat of adsorption (kJ/mol)", format_metric(selected.get("heat_of_adsorption_kj_mol")))
+        st.write("Provenance")
+        display_dataframe(pd.DataFrame([selected]), PROVENANCE_COLUMNS)
+
+    csv_bytes = view.to_csv(index=False).encode("utf-8")
+    st.download_button("Export visible ranked records", csv_bytes, "lavoisier_ranked_visible.csv", "text/csv")
 
 
-st.set_page_config(page_title="Lavoisier", page_icon="L", layout="wide")
-st.title("Lavoisier")
-st.caption(
-    "AI-assisted, human-reviewed screening for carbon-capture materials. "
-    "Scores support comparison; they are not experimental validation."
-)
+def render_virtual_lab() -> None:
+    st.header("Candidate Virtual Lab")
+    st.caption("Synthetic unfamiliar-candidate examples; recommendations are triage, not validation.")
 
-st.subheader("1. Choose review data")
-source_choice = st.radio(
-    "Data source",
-    ["Use demo data", "Upload CSV"],
-    horizontal=True,
-    label_visibility="collapsed",
-)
-uploaded = None
-if source_choice == "Upload CSV":
-    uploaded = st.file_uploader("Upload an approved or review-ready CSV dataset", type=["csv"])
-else:
-    st.info("Using six synthetic records for demonstration only. They are not research findings.")
+    if not require_output(VIRTUAL_LAB_SUMMARY, "python scripts/run_virtual_lab_demo.py"):
+        return
 
-try:
-    frame = load_frame(source_choice, uploaded)
-except (OSError, pd.errors.ParserError, UnicodeDecodeError) as error:
-    st.error(f"The CSV could not be read: {error}")
-    st.stop()
+    summary = read_csv(VIRTUAL_LAB_SUMMARY)
+    if summary.empty:
+        st.info("Virtual lab summary exists but has no rows.")
+        return
 
-if frame is None:
-    st.info("Choose a CSV to begin the review.")
-    st.stop()
+    st.dataframe(summary, hide_index=True, width="stretch")
+    selected_label = st.selectbox("Review candidate", summary["material_id"].astype(str).tolist())
+    selected = summary[summary["material_id"].astype(str).eq(selected_label)].iloc[0]
+    report_path = PROJECT_ROOT / str(selected["report_path"])
+    report_text = read_text(report_path)
 
-validation = validate_material_table(frame)
-if not validation.is_valid:
-    st.error(f"Missing required columns: {', '.join(validation.missing_required)}")
-    st.caption("Required: `material_id` and `evidence_type`.")
-    st.stop()
+    decision_cols = st.columns(4)
+    decision_cols[0].metric("Decision", str(selected["final_decision"]))
+    decision_cols[1].metric("Viability", str(selected["viability_read"]))
+    decision_cols[2].metric("Better than reference", str(selected["better_than_known_reference"]))
+    decision_cols[3].metric("Confidence", str(selected["review_confidence"]))
 
-st.subheader("2. Validate and scope")
-metric_columns = st.columns(4)
-metric_columns[0].metric("Records", len(frame))
-metric_columns[1].metric("Fields", len(frame.columns))
-metric_columns[2].metric("Screening fields", len(validation.available_recommended))
-metric_columns[3].metric("Validation warnings", len(validation.warnings))
+    if report_text:
+        with st.expander("Candidate Review Report", expanded=True):
+            st.markdown(report_text)
+    else:
+        st.warning(f"Candidate report is missing: `{report_path.relative_to(PROJECT_ROOT)}`")
 
-if validation.warnings:
-    with st.expander(f"Review {len(validation.warnings)} validation warning(s)", expanded=True):
-        for warning in validation.warnings:
-            st.warning(warning)
-else:
-    st.success("Minimum schema checks passed with no warnings.")
+    if require_output(FEATURE_SET_EVALUATION, "python scripts/evaluate_descriptor_feature_sets.py"):
+        evaluation = read_json(FEATURE_SET_EVALUATION)
+        comparisons = evaluation.get("comparison_summary", {}).get("target_comparisons", {})
+        if isinstance(comparisons, dict):
+            st.subheader("ML Feature Policy Evidence")
+            rows = []
+            for target, detail in comparisons.items():
+                if isinstance(detail, dict):
+                    rows.append(
+                        {
+                            "target": target,
+                            "status": detail.get("status"),
+                            "baseline_mae": detail.get("baseline_test_mae"),
+                            "core_plus_mae": detail.get("candidate_test_mae"),
+                            "improved_splits": (
+                                f"{detail.get('candidate_improved_split_count')}/"
+                                f"{detail.get('comparable_split_count')}"
+                            ),
+                        }
+                    )
+            st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
 
-filter_columns = st.columns(2)
-filtered = frame.copy()
-if "capture_context" in frame.columns:
-    contexts = sorted(frame["capture_context"].dropna().astype(str).unique())
-    selected_contexts = filter_columns[0].multiselect("Capture context", contexts, default=contexts)
-    filtered = filtered[filtered["capture_context"].astype(str).isin(selected_contexts)]
-if "evidence_type" in frame.columns:
-    evidence_types = sorted(frame["evidence_type"].dropna().astype(str).unique())
-    selected_evidence = filter_columns[1].multiselect("Evidence type", evidence_types, default=evidence_types)
-    filtered = filtered[filtered["evidence_type"].astype(str).isin(selected_evidence)]
 
-if filtered.empty:
-    st.warning("No records match the selected review scope.")
-    st.stop()
+def render_provenance(ranked: pd.DataFrame) -> None:
+    st.header("Provenance And Limitations")
+    st.caption("What this result came from, what was filtered, and what the software cannot claim.")
 
-st.subheader("3. Rank candidates")
-with st.expander("Adjust transparent ranking weights"):
-    st.caption("Weights are normalized automatically. Heat of adsorption scores best in the 25-60 kJ/mol target range.")
-    weights: dict[str, float] = {}
-    weight_columns = st.columns(3)
-    for index, (feature, default_weight) in enumerate(DEFAULT_WEIGHTS.items()):
-        if feature in filtered.columns:
-            with weight_columns[index % 3]:
-                weights[feature] = st.slider(
-                    feature.replace("_", " ").title(),
-                    0.0,
-                    1.0,
-                    float(default_weight),
-                    0.05,
-                )
+    metadata = read_json(SCREENING_METADATA)
+    transformation_log = read_json(TRANSFORMATION_LOG)
 
-ranked = build_tradeoff_flags(rank_materials(filtered, weights=weights))
-ranked.insert(0, "rank", range(1, len(ranked) + 1))
-ranked["has_review_flag"] = ranked["review_flags"].astype(str).str.strip().ne("")
+    if metadata:
+        st.subheader("Controlled Slice")
+        slice_config = metadata.get("slice_config", {})
+        if isinstance(slice_config, dict):
+            st.json(slice_config)
 
-summary_columns = st.columns(3)
-summary_columns[0].metric("Candidates ranked", len(ranked))
-summary_columns[1].metric("Top score", f"{ranked['screening_score'].max():.3f}")
-summary_columns[2].metric("Candidates flagged", int(ranked["has_review_flag"].sum()))
-st.info(explain_top_candidate(ranked, weights))
+        count_cols = st.columns(4)
+        count_cols[0].metric("Input rows", format_metric(metadata.get("input_record_count"), 0))
+        count_cols[1].metric("Controlled slice", format_metric(metadata.get("controlled_slice_count"), 0))
+        count_cols[2].metric("Rank eligible", format_metric(metadata.get("rank_eligible_count"), 0))
+        count_cols[3].metric("Blocked", format_metric(metadata.get("blocked_count"), 0))
 
-show_flagged_only = st.checkbox("Show only candidates requiring review")
-view = ranked[ranked["has_review_flag"]] if show_flagged_only else ranked
-shortlist_size = st.slider("Shortlist size", 1, len(view), min(5, len(view))) if not view.empty else 0
-shortlist = view.head(shortlist_size).copy()
+    if transformation_log:
+        st.subheader("Transformation Receipt")
+        receipt_rows = {
+            "source_name": transformation_log.get("source_name"),
+            "source_version": transformation_log.get("source_version"),
+            "license_status": transformation_log.get("license_status"),
+            "source_checksum_sha256": transformation_log.get("source_checksum_sha256"),
+            "generated_at": transformation_log.get("generated_at"),
+        }
+        st.dataframe(pd.DataFrame([receipt_rows]), hide_index=True, width="stretch")
+        with st.expander("Transformation steps"):
+            for step in transformation_log.get("transformation_steps", []):
+                st.write(f"- {step}")
+        with st.expander("Ranking weights"):
+            st.json(transformation_log.get("ranking_weights", {}))
 
-if shortlist.empty:
-    st.info("No candidates have review flags in the current scope.")
-else:
-    visible_columns = [column for column in DISPLAY_COLUMNS if column in shortlist.columns]
-    st.dataframe(
-        shortlist[visible_columns],
-        width="stretch",
-        hide_index=True,
-        column_config={
-            "screening_score": st.column_config.ProgressColumn(
-                "Screening score", min_value=0.0, max_value=1.0, format="%.3f"
-            ),
-            "review_flags": st.column_config.TextColumn("Review flags", width="large"),
-        },
-    )
+    st.subheader("Feature Source Policy")
+    policy_text = read_text(FEATURE_SOURCE_POLICY)
+    if policy_text:
+        with st.expander("Open feature/database policy"):
+            st.markdown(policy_text)
 
-    chart_data = shortlist.set_index("material_id")[["screening_score"]]
-    st.bar_chart(chart_data, horizontal=True)
+    st.subheader("Current Limits")
+    limitations = metadata.get("limitations", []) if metadata else []
+    if limitations:
+        for limitation in limitations:
+            st.warning(str(limitation))
+    st.warning("Descriptor predictions are ML estimates, not GCMC simulations or lab measurements.")
+    st.warning("The app compares one controlled slice; it does not predict performance at other temperatures or pressures yet.")
 
-    export_columns = [column for column in shortlist.columns if column != "has_review_flag"]
-    csv_bytes = shortlist[export_columns].to_csv(index=False).encode("utf-8")
-    st.download_button(
-        "Export current shortlist",
-        csv_bytes,
-        "lavoisier_shortlist.csv",
-        "text/csv",
-        type="primary",
-    )
+    if not ranked.empty:
+        st.subheader("CoRE Coverage")
+        if "core_match_status" in ranked:
+            st.bar_chart(ranked["core_match_status"].value_counts())
 
-with st.expander("Method and review limits"):
-    st.markdown(
-        "Scores use min-max normalization within the currently filtered dataset. "
-        "Missing numeric values score zero. Density is minimized; heat of adsorption uses a target range; "
-        "other active criteria are maximized. Review provenance, units, humidity stability, and evidence type "
-        "before approving any shortlist."
-    )
+
+def main() -> None:
+    st.set_page_config(page_title="Lavoisier", page_icon="L", layout="wide")
+    st.title("Lavoisier")
+    st.caption("Human-in-the-loop MOF carbon-capture screening with provenance-aware ML triage.")
+
+    if not require_output(RANKED_RECORDS, "python scripts/run_crafted_real_slice.py"):
+        return
+
+    ranked = read_csv(RANKED_RECORDS)
+    tabs = st.tabs(["Ranked MOF Screening", "Candidate Virtual Lab", "Provenance / Limitations"])
+    with tabs[0]:
+        render_ranked_screening(ranked)
+    with tabs[1]:
+        render_virtual_lab()
+    with tabs[2]:
+        render_provenance(ranked)
+
+
+if __name__ == "__main__":
+    main()

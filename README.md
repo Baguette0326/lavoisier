@@ -86,6 +86,17 @@ python -m pip install -e .
 streamlit run app/streamlit_app.py
 ```
 
+The local recruiter-demo app has three tabs:
+
+- **Ranked MOF Screening**: top CRAFTED slice candidates, scores, adsorption
+  metrics, CoRE match status, and provenance fields.
+- **Candidate Virtual Lab**: synthetic unfamiliar-candidate reviews with
+  descriptor-predicted properties, target-specific ML feature policy, and
+  supplied-vs-predicted warnings.
+- **Provenance / Limitations**: controlled slice settings, transformation
+  receipt, feature-source policy, and explicit limits on what the model can
+  claim.
+
 ## Run Checks
 
 ```bash
@@ -131,7 +142,7 @@ The deterministic staging layer for CSV and structured text is documented in [`d
 
 Backend-first screening engine with real local CRAFTED parsing, controlled-slice
 ranking, provenance logging, weak ML triage, descriptor-based property
-prediction, prediction uncertainty intervals, supplied-vs-predicted gap checks,
-and a final virtual-lab assessment for unfamiliar candidates with known
-descriptors. Automated source monitoring and a fuller web interface remain
-later work.
+prediction, target-specific feature policies, prediction uncertainty intervals,
+supplied-vs-predicted gap checks, final virtual-lab assessment for unfamiliar
+candidates with known descriptors, and a minimal Streamlit recruiter-demo UI.
+Automated source monitoring and production-grade UI polish remain later work.
