@@ -1,27 +1,28 @@
 # Lavoisier
 
-Lavoisier is a software-first chemical-engineering portfolio project: a transparent backend-first review tool for screening MOF carbon-capture adsorption records from public or user-supplied datasets.
+Lavoisier is a software-first chemical-engineering portfolio project: a transparent review tool for screening MOF carbon-capture adsorption records from public or user-supplied datasets.
 
 The project does not claim to discover a new best material. It helps users compare records from a controlled MOF/GCMC screening slice, understand tradeoffs, and produce a reviewable shortlist with provenance and comparability warnings.
 
 The canonical end-of-summer scope, milestones, and demo are defined in [`docs/end_of_summer_mvp_prd.md`](docs/end_of_summer_mvp_prd.md).
 
-## Summer Deliverable
+## MVP Snapshot
 
-By the end of summer, the target is a working local web app that can:
+The current MVP is a local Streamlit app plus backend pipeline that can:
 
-- load an approved materials dataset or user-uploaded CSV;
+- load a controlled CRAFTED CO2/N2 MOF screening slice;
 - validate required columns and units;
 - filter records by controlled comparison scope;
 - rank materials using adjustable criteria;
 - flag tradeoffs such as high uptake but high regeneration penalty;
-- explain which variables drive the ranking;
-- export a shortlist and screening report;
-- maintain a source registry for future automated monitoring.
+- enrich matched records with CoRE MOF 2014 structural provenance;
+- train target-specific descriptor-based property predictors;
+- compare synthetic unfamiliar candidates against descriptor-based estimates;
+- export review packets, transformation logs, and screening reports.
 
-The app opens with a small synthetic demo dataset so the review workflow can be explored without downloading data or calling an external service. Demo records are clearly labelled and are not research findings.
+Raw research datasets are not committed. The app reads locally generated reports when available and falls back to committed fixture outputs when the real local slice is unavailable.
 
-## Product Framing
+## Why This Exists
 
 Carbon-capture material screening is heavily studied in research settings. The software opportunity here is different: make complex screening data easier to inspect, rank, and review without overclaiming scientific certainty.
 
@@ -31,7 +32,15 @@ The tool is designed for human-in-the-loop screening:
 source registry -> dataset review -> schema validation -> ranking -> explainability -> human-approved shortlist
 ```
 
-## Initial Scope
+## What Is Real Vs Demo
+
+- **Real pipeline work**: schema validation, controlled-slice filtering, ranking, provenance logging, CoRE descriptor enrichment, repeated-holdout ML evaluation, and virtual-lab report generation.
+- **Real data source target**: CRAFTED 2.0.1 MOF adsorption screening data, processed locally after licence/provenance review.
+- **Committed fallback data**: small fixture exports for opening the app without private or large raw datasets.
+- **Demo candidate records**: synthetic unfamiliar MOF candidates used to demonstrate the review workflow.
+- **Not claimed**: experimental validation, automated material discovery, DFT/GCMC execution, or unrestricted web scraping.
+
+## Scope
 
 Focus on MOFs for post-combustion-style CO2/N2 adsorption screening. The first target source is CRAFTED 2.0.1 after manual licence/provenance approval.
 
@@ -147,5 +156,6 @@ Backend-first screening engine with real local CRAFTED parsing, controlled-slice
 ranking, provenance logging, weak ML triage, descriptor-based property
 prediction, target-specific feature policies, prediction uncertainty intervals,
 supplied-vs-predicted gap checks, final virtual-lab assessment for unfamiliar
-candidates with known descriptors, and a minimal Streamlit recruiter-demo UI.
-Automated source monitoring and production-grade UI polish remain later work.
+candidates with known descriptors, and a Streamlit recruiter-demo UI.
+Automated source monitoring, larger validation sets, and deployed hosting remain
+later work.
