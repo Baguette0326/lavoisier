@@ -11,7 +11,7 @@ Carbon-capture material rankings can be misleading when records come from differ
 ## Demo Flow
 
 1. Open **Ranked MOF Screening**.
-   Show that the app ranks a controlled slice, not all MOFs in the world. Point out the score, CO2 uptake, CO2/N2 selectivity, heat of adsorption, and CoRE match status.
+   Show that the app ranks a controlled slice, not all MOFs in the world. Point out the score, CO2 uptake, CO2/N2 selectivity, heat of adsorption, CoRE match status, and the selected-material score breakdown.
 
 2. Open **Candidate Virtual Lab**.
    Show how a new synthetic candidate is checked against descriptor-based ML estimates. Explain that the model flags gaps between supplied claims and expected properties, but does not prove experimental viability.

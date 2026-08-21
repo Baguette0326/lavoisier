@@ -42,6 +42,15 @@ PROVENANCE_COLUMNS = [
     "core_file_checksum_sha256",
 ]
 
+RANKING_LABELS = {
+    "co2_uptake_mmol_g": "CO2 uptake",
+    "co2_n2_selectivity": "CO2/N2 selectivity",
+    "heat_of_adsorption_kj_mol": "Heat of adsorption",
+    "surface_area_m2_g": "Surface area",
+    "pore_volume_cm3_g": "Pore volume",
+    "density_g_cm3": "Density",
+}
+
 
 def apply_demo_styles() -> None:
     st.markdown(
@@ -177,6 +186,37 @@ def render_slice_conditions(metadata: dict[str, object]) -> None:
         st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
 
 
+def build_score_breakdown(selected: pd.Series, metadata: dict[str, object]) -> pd.DataFrame:
+    weights = metadata.get("weights", {}) if metadata else {}
+    if not isinstance(weights, dict):
+        weights = {}
+
+    available_weights = {
+        column: float(weight)
+        for column, weight in weights.items()
+        if column in selected.index and f"{column}_score" in selected.index
+    }
+    total_weight = sum(available_weights.values())
+    if total_weight <= 0:
+        return pd.DataFrame()
+
+    rows = []
+    for column, weight in available_weights.items():
+        normalized_weight = weight / total_weight
+        component_score = float(selected.get(f"{column}_score", 0.0))
+        rows.append(
+            {
+                "criterion": RANKING_LABELS.get(column, column),
+                "raw_value": format_metric(selected.get(column)),
+                "component_score": round(component_score, 3),
+                "weight": round(normalized_weight, 3),
+                "score_contribution": round(component_score * normalized_weight, 3),
+            }
+        )
+
+    return pd.DataFrame(rows).sort_values("score_contribution", ascending=False)
+
+
 def render_ranked_screening(ranked: pd.DataFrame) -> None:
     st.header("Ranked MOF Screening")
     st.caption("Controlled CRAFTED MOF/GCMC slice with CoRE provenance enrichment.")
@@ -185,7 +225,8 @@ def render_ranked_screening(ranked: pd.DataFrame) -> None:
         st.info("No ranked records are available yet.")
         return
 
-    render_slice_conditions(read_json(SCREENING_METADATA))
+    metadata = read_json(SCREENING_METADATA)
+    render_slice_conditions(metadata)
 
     top = ranked.iloc[0]
     core_matches = int(ranked["core_match_status"].eq("matched_core2014").sum()) if "core_match_status" in ranked else 0
@@ -219,6 +260,10 @@ def render_ranked_screening(ranked: pd.DataFrame) -> None:
         detail_cols[0].metric("CO2 uptake (mmol/g)", format_metric(selected.get("co2_uptake_mmol_g")))
         detail_cols[1].metric("CO2/N2 selectivity", format_metric(selected.get("co2_n2_selectivity")))
         detail_cols[2].metric("Heat of adsorption (kJ/mol)", format_metric(selected.get("heat_of_adsorption_kj_mol")))
+        breakdown = build_score_breakdown(selected, metadata)
+        if not breakdown.empty:
+            st.write("Score breakdown")
+            st.dataframe(breakdown, hide_index=True, width="stretch")
         st.write("Provenance")
         display_dataframe(pd.DataFrame([selected]), PROVENANCE_COLUMNS)
 

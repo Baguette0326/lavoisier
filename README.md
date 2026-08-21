@@ -16,6 +16,7 @@ The current MVP is a local Streamlit app plus backend pipeline that can:
 - validate required columns and units;
 - filter records by controlled comparison scope;
 - rank materials using adjustable criteria;
+- explain selected-material score contributions from component scores and weights;
 - flag tradeoffs such as high uptake but high regeneration penalty;
 - enrich matched records with CoRE MOF 2014 structural provenance;
 - train target-specific descriptor-based property predictors;
