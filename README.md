@@ -24,6 +24,8 @@ The current MVP is a local Streamlit app plus backend pipeline that can:
 
 Raw research datasets are not committed. The app reads locally generated reports when available and falls back to committed fixture outputs when the real local slice is unavailable.
 
+For the system map, see [`docs/mvp_architecture.md`](docs/mvp_architecture.md).
+
 ## Why This Exists
 
 Carbon-capture material screening is heavily studied in research settings. The software opportunity here is different: make complex screening data easier to inspect, rank, and review without overclaiming scientific certainty.
