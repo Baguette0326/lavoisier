@@ -4,6 +4,8 @@ Lavoisier is a software-first chemical-engineering portfolio project: a transpar
 
 The project does not claim to discover a new best material. It helps users compare records from a controlled MOF/GCMC screening slice, understand tradeoffs, and produce a reviewable shortlist with provenance and comparability warnings.
 
+![Lavoisier demo preview](docs/assets/lavoisier-preview.png)
+
 The canonical end-of-summer scope, milestones, and demo are defined in [`docs/end_of_summer_mvp_prd.md`](docs/end_of_summer_mvp_prd.md).
 
 ## MVP Snapshot
