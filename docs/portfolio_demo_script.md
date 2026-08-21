@@ -23,6 +23,8 @@ Carbon-capture material rankings can be misleading when records come from differ
 
 The AI/ML part is used as reviewable decision support. It estimates target properties from descriptors, applies target-specific feature policies, and flags uncertainty. The ranking and evidence rules are still explicit, auditable, and constrained by the selected data slice.
 
+For shorter interview-ready answers, see [`recruiter_talking_points.md`](recruiter_talking_points.md).
+
 ## What Not To Claim
 
 - Do not claim Lavoisier discovered a new best MOF.

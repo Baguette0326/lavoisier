@@ -111,7 +111,8 @@ The local recruiter-demo app has three tabs:
   claim.
 
 For a short portfolio walkthrough, use
-[`docs/portfolio_demo_script.md`](docs/portfolio_demo_script.md).
+[`docs/portfolio_demo_script.md`](docs/portfolio_demo_script.md). For interview
+prep, use [`docs/recruiter_talking_points.md`](docs/recruiter_talking_points.md).
 
 ## Run Checks
 
