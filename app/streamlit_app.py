@@ -144,6 +144,39 @@ def display_dataframe(frame: pd.DataFrame, columns: list[str]) -> None:
     st.dataframe(frame[visible], hide_index=True, width="stretch")
 
 
+def render_slice_conditions(metadata: dict[str, object]) -> None:
+    slice_config = metadata.get("slice_config", {}) if metadata else {}
+    if not isinstance(slice_config, dict) or not slice_config:
+        return
+
+    labels = {
+        "material_class": "Material class",
+        "evidence_type": "Evidence type",
+        "simulation_method": "Simulation method",
+        "temperature_k": "Temperature",
+        "force_field": "Force field",
+        "charge_method": "Charge method",
+        "co2_pressure_bar": "CO2 pressure",
+        "n2_pressure_bar": "N2 pressure",
+    }
+    units = {
+        "temperature_k": "K",
+        "co2_pressure_bar": "bar",
+        "n2_pressure_bar": "bar",
+    }
+    rows = []
+    for key, label in labels.items():
+        value = slice_config.get(key)
+        if value is None:
+            continue
+        unit = units.get(key, "")
+        rows.append({"condition": label, "value": f"{value} {unit}".strip()})
+
+    if rows:
+        st.subheader("Controlled Slice Conditions")
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+
+
 def render_ranked_screening(ranked: pd.DataFrame) -> None:
     st.header("Ranked MOF Screening")
     st.caption("Controlled CRAFTED MOF/GCMC slice with CoRE provenance enrichment.")
@@ -151,6 +184,8 @@ def render_ranked_screening(ranked: pd.DataFrame) -> None:
     if ranked.empty:
         st.info("No ranked records are available yet.")
         return
+
+    render_slice_conditions(read_json(SCREENING_METADATA))
 
     top = ranked.iloc[0]
     core_matches = int(ranked["core_match_status"].eq("matched_core2014").sum()) if "core_match_status" in ranked else 0
@@ -271,9 +306,7 @@ def render_provenance(ranked: pd.DataFrame) -> None:
 
     if metadata:
         st.subheader("Controlled Slice")
-        slice_config = metadata.get("slice_config", {})
-        if isinstance(slice_config, dict):
-            st.json(slice_config)
+        render_slice_conditions(metadata)
 
         count_cols = st.columns(4)
         count_cols[0].metric("Input rows", format_metric(metadata.get("input_record_count"), 0))
