@@ -11,6 +11,8 @@ import streamlit as st
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RANKED_RECORDS = PROJECT_ROOT / "reports" / "crafted_real_slice_export" / "ranked_records.csv"
+EXCLUDED_RECORDS = PROJECT_ROOT / "reports" / "crafted_real_slice_export" / "excluded_records.csv"
+BLOCKED_RECORDS = PROJECT_ROOT / "reports" / "crafted_real_slice_export" / "blocked_records.csv"
 SCREENING_METADATA = PROJECT_ROOT / "reports" / "crafted_real_slice_export" / "screening_metadata.json"
 TRANSFORMATION_LOG = PROJECT_ROOT / "reports" / "crafted_real_slice_export" / "transformation_log.json"
 VIRTUAL_LAB_SUMMARY = PROJECT_ROOT / "reports" / "virtual_lab_demo" / "demo_summary.csv"
@@ -40,6 +42,21 @@ PROVENANCE_COLUMNS = [
     "core_formula_sum",
     "core_cell_volume",
     "core_file_checksum_sha256",
+]
+
+REVIEW_RECORD_COLUMNS = [
+    "material_id",
+    "comparability_status",
+    "comparability_reasons",
+    "block_type",
+    "block_reason",
+    "rank_eligible",
+    "review_flags",
+    "temperature_k",
+    "co2_pressure_bar",
+    "n2_pressure_bar",
+    "force_field",
+    "charge_method",
 ]
 
 RANKING_LABELS = {
@@ -151,6 +168,20 @@ def format_metric(value: object, digits: int = 3) -> str:
 def display_dataframe(frame: pd.DataFrame, columns: list[str]) -> None:
     visible = [column for column in columns if column in frame.columns]
     st.dataframe(frame[visible], hide_index=True, width="stretch")
+
+
+def render_review_records(label: str, frame: pd.DataFrame, filename: str) -> None:
+    if frame.empty:
+        st.success(f"No {label.lower()} records in this export.")
+        return
+
+    display_dataframe(frame, REVIEW_RECORD_COLUMNS)
+    st.download_button(
+        f"Export {label.lower()} records",
+        frame.to_csv(index=False).encode("utf-8"),
+        filename,
+        "text/csv",
+    )
 
 
 def render_slice_conditions(metadata: dict[str, object]) -> None:
@@ -348,6 +379,8 @@ def render_provenance(ranked: pd.DataFrame) -> None:
 
     metadata = read_json(SCREENING_METADATA)
     transformation_log = read_json(TRANSFORMATION_LOG)
+    excluded = read_csv(EXCLUDED_RECORDS)
+    blocked = read_csv(BLOCKED_RECORDS)
 
     if metadata:
         st.subheader("Controlled Slice")
@@ -358,6 +391,15 @@ def render_provenance(ranked: pd.DataFrame) -> None:
         count_cols[1].metric("Controlled slice", format_metric(metadata.get("controlled_slice_count"), 0))
         count_cols[2].metric("Rank eligible", format_metric(metadata.get("rank_eligible_count"), 0))
         count_cols[3].metric("Blocked", format_metric(metadata.get("blocked_count"), 0))
+
+    st.subheader("Excluded And Blocked Records")
+    review_tabs = st.tabs(["Excluded by slice", "Blocked from ranking"])
+    with review_tabs[0]:
+        st.caption("Records outside the controlled slice are kept separate instead of silently dropped.")
+        render_review_records("Excluded", excluded, "lavoisier_excluded_records.csv")
+    with review_tabs[1]:
+        st.caption("Records that fail comparability or required-field checks are blocked from official ranking.")
+        render_review_records("Blocked", blocked, "lavoisier_blocked_records.csv")
 
     if transformation_log:
         st.subheader("Transformation Receipt")

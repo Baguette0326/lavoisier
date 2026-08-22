@@ -17,7 +17,7 @@ Carbon-capture material rankings can be misleading when records come from differ
    Show how a new synthetic candidate is checked against descriptor-based ML estimates. Explain that the model flags gaps between supplied claims and expected properties, but does not prove experimental viability.
 
 3. Open **Provenance / Limitations**.
-   Show the transformation receipt, controlled slice settings, feature-source policy, and known limitations. This is the main difference between the project and simply pasting a paper into a generic LLM.
+   Show the transformation receipt, controlled slice settings, excluded/blocked record views, feature-source policy, and known limitations. This is the main difference between the project and simply pasting a paper into a generic LLM.
 
 ## What To Say If Asked About AI
 
